@@ -2,8 +2,17 @@
 
 Mtree (previously Modular Tree) is a library for making 3d trees. It comes as an addon for blender but the c++ library can be used separately.
 
+> **Note:** This is a maintained fork of the original [Mtree by MaximeHerpin](https://github.com/MaximeHerpin/modular_tree). The original project appears to be unmaintained, and this fork aims to keep the addon compatible with newer versions of Blender and address outstanding issues.
+
+## Maintainer
+
+**Current Maintainer:** [GoodPie](https://github.com/GoodPie)
+
+**Original Author:** [MaximeHerpin](https://github.com/MaximeHerpin)
+
 ## Table of contents
 - [Mtree](#mtree)
+  - [Maintainer](#maintainer)
   - [Table of contents](#table-of-contents)
   - [Installation (blender addon)](#installation-blender-addon)
   - [Development](#development)
@@ -11,6 +20,7 @@ Mtree (previously Modular Tree) is a library for making 3d trees. It comes as an
     - [Installation](#installation)
     - [Usage](#usage)
   - [License](#license)
+  - [Acknowledgments](#acknowledgments)
 
 
 ## Installation (blender addon)
@@ -23,7 +33,7 @@ Follow the [blender documentation][blender addon doc] to install the downloaded 
 - Blender 2.93 or higher (if you want to to develop the blender addon)
 
 ### Installation
-1. Clone the repository reccursively `git clone --recursive https://github.com/MaximeHerpin/modular_tree`
+1. Clone the repository recursively `git clone --recursive https://github.com/GoodPie/modular_tree`
 2. Execute the `build_mtree` bash script corresponding to your platform.
 3. If all went well, a cmake project has been generated under `mtree/build`.
 4. You can bundle the blender addon by calling the [addon bundling script].
@@ -63,10 +73,19 @@ Tree tree(trunk);
 Blender being under the GPL license, the blender addon (all files under `python_classes` as well as `__init__.py`) is under the [GPLv3] license.\
 The Mtree library is under the [MIT] license.
 
+This fork maintains the same licensing as the original project.
 
-[latest release]: https://github.com/MaximeHerpin/modular_tree/releases
+## Acknowledgments
+
+This project is a fork of [Mtree by MaximeHerpin](https://github.com/MaximeHerpin/modular_tree), originally created in 2021. All credit for the original design and implementation goes to the original author.
+
+Changes made in this fork are documented in the commit history.
+
+
+[latest release]: https://github.com/GoodPie/modular_tree/releases
+[original project]: https://github.com/MaximeHerpin/modular_tree
 [blender addon doc]: https://docs.blender.org/manual/en/latest/editors/preferences/addons.html#installing-add-ons
 [Cmake]: https://cmake.org/
 [addon bundling script]: ./.github/scripts/setup_addon.py
 [GPLv3]: https://www.gnu.org/licenses/gpl-3.0.en.html
-[MIT]: https://choosealicense.com/licenses/mit/\
+[MIT]: https://choosealicense.com/licenses/mit/
