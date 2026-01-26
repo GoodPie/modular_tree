@@ -16,18 +16,6 @@ from pathlib import Path
 from . import python_classes
 
 
-bl_info = {
-    "name" : "Modular Tree",
-    "author" : "Maxime",
-    "description" : "create trees",
-    "blender" : (2, 83, 0),
-    "version" : (4, 0, 2),
-    "location" : "",
-    "warning" : "",
-    "category" : "Generic"
-}
-
-
 # auto_load.init()
 
 def register():
