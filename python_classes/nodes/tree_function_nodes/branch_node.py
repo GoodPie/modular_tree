@@ -1,13 +1,15 @@
 from random import randint
 import bpy
 from ..base_types.node import MtreeFunctionNode
-from ....m_tree import BranchFunction
+from ...m_tree_wrapper import lazy_m_tree
 
 class BranchNode(bpy.types.Node, MtreeFunctionNode):
     bl_idname = "mt_BranchNode"
     bl_label = "Branches"
 
-    tree_function = BranchFunction
+    @property
+    def tree_function(self):
+        return lazy_m_tree.BranchFunction
 
     def init(self, context):
         self.add_input("mt_TreeSocket", "Tree", is_property=False)

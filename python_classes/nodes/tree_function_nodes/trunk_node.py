@@ -1,14 +1,15 @@
 from random import randint
 import bpy
 from ..base_types.node import MtreeFunctionNode
-from ....m_tree import TrunkFunction
+from ...m_tree_wrapper import lazy_m_tree
 
 class TrunkNode(bpy.types.Node, MtreeFunctionNode):
     bl_idname = "mt_TrunkNode"
     bl_label = "Trunk"
 
-
-    tree_function = TrunkFunction
+    @property
+    def tree_function(self):
+        return lazy_m_tree.TrunkFunction
 
     def init(self, context):
         self.add_input("mt_TreeSocket", "Tree", is_property=False)

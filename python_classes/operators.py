@@ -6,7 +6,6 @@ import bmesh
 import gpu
 import numpy as np
 
-from .. import m_tree
 from .resources.node_groups import distribute_leaves
 
 

@@ -1,13 +1,14 @@
 import bpy
 from ..base_types.node import MtreeFunctionNode
-from ....m_tree import PipeRadiusFunction
+from ...m_tree_wrapper import lazy_m_tree
 
 class PipeRadiusNode(bpy.types.Node, MtreeFunctionNode):
     bl_idname = "mt_PipeRadiusNode"
     bl_label = "Radius Override"
 
-
-    tree_function = PipeRadiusFunction
+    @property
+    def tree_function(self):
+        return lazy_m_tree.PipeRadiusFunction
 
     def init(self, context):
         self.add_input("mt_TreeSocket", "Tree", is_property=False)

@@ -1,7 +1,7 @@
 import time
 import numpy as np
 import bpy
-from .... import m_tree
+from ...m_tree_wrapper import lazy_m_tree as m_tree
 from ..base_types.node import MtreeNode 
 
 def on_update_prop(node, context):

@@ -1,6 +1,6 @@
 import bpy
 from ..base_types.socket import MtreeSocket
-from ....m_tree import ConstantProperty, RandomProperty, PropertyWrapper
+from ...m_tree_wrapper import lazy_m_tree
 
 class MtreePropertySocket(bpy.types.NodeSocket, MtreeSocket):
     bl_idname = 'mt_PropertySocket'
@@ -21,10 +21,10 @@ class MtreePropertySocket(bpy.types.NodeSocket, MtreeSocket):
     def get_property(self):
         if self.is_linked:
             property = self.links[0].from_node.get_property()
-            return PropertyWrapper(property)
+            return lazy_m_tree.PropertyWrapper(property)
         else:
-            property = ConstantProperty(float(self.property_value))
-            wrapper = PropertyWrapper()
+            property = lazy_m_tree.ConstantProperty(float(self.property_value))
+            wrapper = lazy_m_tree.PropertyWrapper()
             wrapper.set_constant_property(property)
             return wrapper
     

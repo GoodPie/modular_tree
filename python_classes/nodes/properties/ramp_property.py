@@ -1,12 +1,14 @@
 import bpy
 from ..base_types.node import MtreePropertyNode
-from ....m_tree import SimpleCurveProperty, PropertyWrapper
+from ...m_tree_wrapper import lazy_m_tree
 
 class RampPropertyNode(bpy.types.Node, MtreePropertyNode):
     bl_idname = "mt_RampPropertyNode"
     bl_label = "Ramp"
 
-    property_type = SimpleCurveProperty
+    @property
+    def property_type(self):
+        return lazy_m_tree.SimpleCurveProperty
 
     def init(self, context):
         self.add_input("mt_PropertySocket", "start", property_name="y_min", property_value=.01)
