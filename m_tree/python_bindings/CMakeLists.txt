@@ -5,6 +5,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(Python 3.11 COMPONENTS Interpreter Development REQUIRED)
+
+# Tell pybind11 to use modern FindPython instead of deprecated FindPythonInterp
+# Required for CMake 3.27+ where FindPythonInterp was removed (CMP0148)
+set(PYBIND11_FINDPYTHON ON)
+
 add_subdirectory(../dependencies/pybind11 pybind11)
 
 file(GLOB_RECURSE sources
