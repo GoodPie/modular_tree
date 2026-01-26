@@ -48,7 +48,7 @@ def build():
     if not os.path.exists(build_dir):
         os.makedirs(build_dir)
 
-    subprocess.check_call(['cmake', "../", "-DPYBIND11_PYTHON_VERSION=3.11", "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"], cwd=build_dir)
+    subprocess.check_call(['cmake', "../", "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"], cwd=build_dir)
     subprocess.check_call(['cmake', '--build', '.', "--config", "Release"], cwd=build_dir)
 
     print([i for i in os.listdir(os.path.join(os.path.dirname(__file__), "binaries"))])

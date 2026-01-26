@@ -4,7 +4,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-add_subdirectory(../dependencies/pybind11 [EXCLUDE_FROM_ALL])
+find_package(Python 3.11 COMPONENTS Interpreter Development REQUIRED)
+add_subdirectory(../dependencies/pybind11 pybind11)
 
 file(GLOB_RECURSE sources
     "./*.hpp"
