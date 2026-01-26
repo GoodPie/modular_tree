@@ -50,12 +50,14 @@ jobs:
         id: vars
         run: echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
       - name: Update release
-        uses: johnwbyrd/update-release@v1.0.0
+        uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          files: ./modular_tree_windows/modular_tree_${{ steps.vars.outputs.version }}_windows.zip ./modular_tree_linux/modular_tree_${{ steps.vars.outputs.version }}_linux.zip ./modular_tree_macOS/modular_tree_${{ steps.vars.outputs.version }}_macOS.zip 
-          release: Release V${{ steps.vars.outputs.version }}${{ env.STATUS }}
-          tag: ${{ steps.vars.outputs.version }}${{ env.STATUS }}
-          message: V${{ steps.vars.outputs.version }}
-          body: ''
+          files: |
+            ./modular_tree_windows/modular_tree_${{ steps.vars.outputs.version }}_windows.zip
+            ./modular_tree_linux/modular_tree_${{ steps.vars.outputs.version }}_linux.zip
+            ./modular_tree_macOS/modular_tree_${{ steps.vars.outputs.version }}_macOS.zip
+          name: Release V${{ steps.vars.outputs.version }}${{ env.STATUS }}
+          tag_name: ${{ steps.vars.outputs.version }}${{ env.STATUS }}
+          body: V${{ steps.vars.outputs.version }}
 
