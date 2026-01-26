@@ -17,11 +17,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           submodules: true
       - name: setup python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: 3.9
       - name: build
@@ -29,7 +29,7 @@ jobs:
       - name: package addon
         run: python .github/scripts/setup_addon.py
       - name: upload zipped addon
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: modular_tree_${{ matrix.name }}
           path: tmp/*.zip
@@ -41,14 +41,14 @@ jobs:
       STATUS: ${{ !endsWith(github.ref, 'master') && 'alpha' || '' }}
     steps:
       - name: checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Download build artifacts
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v4
       - name: Display structure of downloaded files
         run: ls -R
       - name: Get version
         id: vars
-        run: echo ::set-output name=version::$(cat VERSION)
+        run: echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
       - name: Update release
         uses: johnwbyrd/update-release@v1.0.0
         with:
