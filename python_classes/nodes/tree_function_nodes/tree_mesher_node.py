@@ -103,12 +103,12 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
         mesh.loops.add(len(faces))
         mesh.loops.foreach_set("vertex_index", faces)
         
-        loop_start = np.arange(0, len(faces), 4, dtype=np.int)
-        loop_total = np.ones(len(faces)//4, dtype = np.int)*4
+        loop_start = np.arange(0, len(faces), 4, dtype=np.int32)
+        loop_total = np.ones(len(faces)//4, dtype=np.int32)*4
         mesh.polygons.add(len(faces)//4)
         mesh.polygons.foreach_set("loop_start", loop_start)
         mesh.polygons.foreach_set("loop_total", loop_total)
-        mesh.polygons.foreach_set('use_smooth',  np.ones(len(faces)//4, dtype=np.bool))
+        mesh.polygons.foreach_set('use_smooth',  np.ones(len(faces)//4, dtype=bool))
         
         
         uv_data = cpp_mesh.get_uvs()
