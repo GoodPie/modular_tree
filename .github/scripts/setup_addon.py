@@ -25,7 +25,7 @@ def setup_addon_directory():
         list_files(".")
         raise Exception("no libraries were output")
     for f in all_files:
-        if f.endswith(".py") or f.endswith(".pyd") or f.endswith(".so"):
+        if f.endswith(".py") or f.endswith(".pyd") or f.endswith(".so") or f == "blender_manifest.toml":
             shutil.copy2(os.path.join(".",f), root)
         elif f == ADDON_SOURCE_DIRNAME or f == RESOURCES_DIRNAME:
             shutil.copytree(os.path.join(".",f), os.path.join(root, f))
