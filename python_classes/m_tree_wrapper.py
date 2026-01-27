@@ -1,8 +1,9 @@
 """Lazy loader for m_tree native library to avoid circular imports.
 
-When Blender loads the addon as bl_ext.user_default.modular_tree, module-level
-imports of m_tree fail because the parent package isn't fully initialized yet.
-This wrapper defers the import until first access.
+When Blender loads the addon, module-level imports of m_tree can fail due to
+import timing issues during addon initialization. This wrapper defers the
+import until first access. The m_tree module is installed as a top-level
+package by Blender's extension system (from wheels), not nested under the addon.
 """
 
 _m_tree = None
@@ -12,9 +13,8 @@ def get_m_tree():
     """Lazily import and cache the m_tree native library."""
     global _m_tree
     if _m_tree is None:
-        import importlib
-        parent_package = __package__.rsplit('.', 1)[0]
-        _m_tree = importlib.import_module('.m_tree', parent_package)
+        from m_tree import m_tree
+        _m_tree = m_tree
     return _m_tree
 
 

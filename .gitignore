@@ -40,3 +40,4 @@ m_tree.egg-info/
 *.exp
 */binaries/
 tmp/*
+*.whl
