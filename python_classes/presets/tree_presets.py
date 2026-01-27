@@ -13,6 +13,9 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any
 
+# Parameters that require PropertyWrapper (ConstantProperty) instead of raw values
+PROPERTY_WRAPPER_PARAMS = {'length', 'start_radius', 'randomness', 'start_angle'}
+
 
 @dataclass
 class TreePreset:
@@ -35,6 +38,8 @@ _DEFAULT_BRANCH_PARAMS = {
     'resolution': 3,
     'split_proba': 0.5,
     'break_chance': 0.02,
+    'start_radius': 0.4,
+    'randomness': 0.5,
 }
 
 
@@ -107,6 +112,14 @@ def _generate_random_params() -> dict[str, Any]:
     }
 
 
+def _wrap_property_value(key: str, value: float):
+    """Wrap value in ConstantProperty if the parameter requires it."""
+    if key in PROPERTY_WRAPPER_PARAMS:
+        from ..m_tree_wrapper import lazy_m_tree as m_tree
+        return m_tree.ConstantProperty(float(value))
+    return value
+
+
 def apply_preset(branches, preset_name: str) -> None:
     """Apply a preset's parameters to a BranchFunction instance.
 
@@ -116,7 +129,7 @@ def apply_preset(branches, preset_name: str) -> None:
     """
     # Apply defaults first
     for key, value in _DEFAULT_BRANCH_PARAMS.items():
-        setattr(branches, key, value)
+        setattr(branches, key, _wrap_property_value(key, value))
 
     # Get preset-specific or random parameters
     if preset_name == 'RANDOM':
@@ -127,4 +140,4 @@ def apply_preset(branches, preset_name: str) -> None:
 
     # Apply preset parameters
     for key, value in params.items():
-        setattr(branches, key, value)
+        setattr(branches, key, _wrap_property_value(key, value))
