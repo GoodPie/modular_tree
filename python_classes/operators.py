@@ -61,6 +61,11 @@ class QuickGenerateTree(bpy.types.Operator):
         items=get_preset_items(),
         default='RANDOM'
     )
+    add_leaves: bpy.props.BoolProperty(
+        name="Add Leaves",
+        default=True,
+        description="Automatically add leaf distribution"
+    )
 
     def execute(self, context):
         try:
@@ -95,6 +100,11 @@ class QuickGenerateTree(bpy.types.Operator):
 
             # Create Blender object
             self._create_blender_object(context, mesh_data, f"Tree_{seed}")
+
+            # Add leaves if enabled
+            if self.add_leaves:
+                obj = context.view_layer.objects.active
+                distribute_leaves(obj)
 
             elapsed = time.time() - start_time
             self.report({'INFO'}, f"Generated tree (seed={seed}) in {elapsed:.2f}s")
@@ -152,6 +162,7 @@ class QuickGenerateTree(bpy.types.Operator):
         layout = self.layout
         layout.prop(self, "preset")
         layout.prop(self, "seed")
+        layout.prop(self, "add_leaves")
 
 
 def register():
