@@ -48,15 +48,18 @@ jobs:
         run: ls -R
       - name: Get version
         id: vars
-        run: echo "version=$(cat VERSION)" >> $GITHUB_OUTPUT
+        run: |
+          RAW_VERSION=$(cat VERSION)
+          echo "raw_version=$RAW_VERSION" >> $GITHUB_OUTPUT
+          echo "version=$(echo $RAW_VERSION | tr '_' '.')" >> $GITHUB_OUTPUT
       - name: Update release
         uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           files: |
-            ./modular_tree_windows/modular_tree_${{ steps.vars.outputs.version }}_windows.zip
-            ./modular_tree_linux/modular_tree_${{ steps.vars.outputs.version }}_linux.zip
-            ./modular_tree_macOS/modular_tree_${{ steps.vars.outputs.version }}_macOS.zip
+            ./modular_tree_windows/modular_tree_${{ steps.vars.outputs.raw_version }}_windows.zip
+            ./modular_tree_linux/modular_tree_${{ steps.vars.outputs.raw_version }}_linux.zip
+            ./modular_tree_macOS/modular_tree_${{ steps.vars.outputs.raw_version }}_macOS.zip
           name: Release V${{ steps.vars.outputs.version }}${{ env.STATUS }}
           tag_name: ${{ steps.vars.outputs.version }}${{ env.STATUS }}
           body: V${{ steps.vars.outputs.version }}
