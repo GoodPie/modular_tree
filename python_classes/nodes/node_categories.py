@@ -16,6 +16,7 @@ node_categories = [
     ]),
     MTreeNodeCategory('Branch', "Branch", items=[
         NodeItem("mt_BranchNode"),
+        NodeItem("mt_GrowthNode"),
     ]),
     MTreeNodeCategory('Modifiers', "Modifiers", items=[
         NodeItem("mt_PipeRadiusNode"),

@@ -19,6 +19,7 @@ add_subdirectory(./python_bindings)
 
 # Only build tests when not building as a wheel
 if(NOT DEFINED SKBUILD_PROJECT_NAME)
+    enable_testing()
     add_subdirectory(./tests)
 endif()
 

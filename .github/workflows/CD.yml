@@ -2,7 +2,33 @@ name: Build and Release
 on: [push]
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Bootstrap vcpkg
+        run: |
+          cd m_tree/dependencies/vcpkg
+          ./bootstrap-vcpkg.sh
+          ./vcpkg install eigen3:x64-linux
+
+      - name: Configure and Build
+        run: |
+          mkdir -p m_tree/build
+          cd m_tree/build
+          cmake ../ -DCMAKE_BUILD_TYPE=Release
+          cmake --build . --config Release
+
+      - name: Run Tests
+        run: |
+          cd m_tree/build
+          ctest --output-on-failure -C Release
+
   build-wheels:
+    needs: test
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
