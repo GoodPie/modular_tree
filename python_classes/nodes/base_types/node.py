@@ -1,25 +1,31 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import bpy
 
+if TYPE_CHECKING:
+    from bpy.types import NodeTree, NodeSocket
 
 
 class MtreeNode:
     @classmethod
-    def poll(cls, nodeTree):
+    def poll(cls, nodeTree: NodeTree) -> bool:
         return nodeTree.bl_idname == "mt_MtreeNodeTree"
 
     # utility functions ----------------------------
 
-    def get_node_tree(self):
+    def get_node_tree(self) -> NodeTree:
         return self.id_data
 
-    def get_child_nodes(self):
+    def get_child_nodes(self) -> list:
         child_nodes = []
         for socket in self.outputs:
             for link in socket.links:
                 child_nodes.append(link.to_node)
         return child_nodes
-    
-    def get_neighbours(self):
+
+    def get_neighbours(self) -> list:
         neighbours = []
         for socket in self.inputs:
             for link in socket.links:
@@ -28,24 +34,26 @@ class MtreeNode:
             for link in socket.links:
                 neighbours.append(link.to_node)
         return neighbours
-    
-    def add_input(self, socket_type, name, **kwargs):
+
+    def add_input(self, socket_type: str, name: str, **kwargs) -> NodeSocket:
         socket = self.inputs.new(socket_type, name)
         for key, value in kwargs.items():
             setattr(socket, key, value)
-    
-    def add_output(self, socket_type, name, **kwargs):
+        return socket
+
+    def add_output(self, socket_type: str, name: str, **kwargs) -> NodeSocket:
         socket = self.outputs.new(socket_type, name)
         for key, value in kwargs.items():
             setattr(socket, key, value)
+        return socket
 
 
-    def get_mesher_rec(self, seen_nodes):
+    def get_mesher_rec(self, seen_nodes: set) -> MtreeNode | None:
         if self.bl_idname == 'mt_MesherNode':
             return self
 
         seen_nodes.add(self.name)
-        
+
         for neighbour in self.get_neighbours():
             if neighbour.name in seen_nodes:
                 continue
@@ -53,28 +61,25 @@ class MtreeNode:
             if mesher is not None:
                 return mesher
         return None
-    
 
-    def get_mesher(self):
+    def get_mesher(self) -> MtreeNode | None:
         seen_nodes = set()
         return self.get_mesher_rec(seen_nodes)
 
     # Node events, don't override ----------------
 
-    def draw_buttons(self, context, layout):
+    def draw_buttons(self, context, layout) -> None:
         self.draw(context, layout)
 
-    def draw_buttons_ext(self, context, layout):
+    def draw_buttons_ext(self, context, layout) -> None:
         self.draw_inspector(context, layout)
-    
-    
-    
+
     # Functions that can be overriden -------------
 
-    def draw(self, context, layout):
+    def draw(self, context, layout) -> None:
         pass
 
-    def draw_inspector(self, context, layout):
+    def draw_inspector(self, context, layout) -> None:
         pass
 
 
