@@ -42,7 +42,7 @@ A procedural tree generator addon for Blender using a node-based workflow.
 5. Click **Generate Tree** in the Tree Mesher node
 6. (Optional) Click **Add Leaves** to distribute leaves on the tree
 
-**Tip:** Select a Branch node and press `N` to see organized parameter sections with descriptions.
+**Tip:** Select a Branch node and press `N` to see organized parameter sections with descriptions, plus **preset buttons** (Oak, Pine, Willow, Random) to quickly configure branch characteristics.
 
 ## Node Types
 
@@ -59,6 +59,7 @@ A procedural tree generator addon for Blender using a node-based workflow.
 ## Customization
 
 ### Branch Parameters
+Use the **Presets** section in the inspector panel (`N` key) to apply Oak, Pine, Willow, or Random configurations, or manually adjust:
 - **Seed** - Controls randomization (same seed = same tree)
 - **Length/Radius** - Size and thickness
 - **Up Attraction/Gravity** - How branches grow relative to gravity
