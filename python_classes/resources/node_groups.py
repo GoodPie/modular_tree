@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import bpy
 from bpy.types import Object, NodeTree
+import math
 
 # =============================================================================
 # Version constant - increment when changing node group implementation
@@ -287,8 +288,8 @@ def create_leaves_distribution_node_group() -> NodeTree:
     random_rot = nodes.new('FunctionNodeRandomValue')
     random_rot.location = (_COL_ALIGN, -NODE_SPACING_Y * 2.6)
     random_rot.data_type = 'FLOAT_VECTOR'
-    random_rot.inputs['Min'].default_value = (-3.14159, -3.14159, -3.14159)
-    random_rot.inputs['Max'].default_value = (3.14159, 3.14159, 3.14159)
+    random_rot.inputs['Min'].default_value = (-math.pi, -math.pi, -math.pi)
+    random_rot.inputs['Max'].default_value = (math.pi, math.pi, math.pi)
 
     # Multiply rotation variation by the variation parameter
     multiply_rot = nodes.new('ShaderNodeVectorMath')
