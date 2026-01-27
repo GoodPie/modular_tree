@@ -1,5 +1,6 @@
 from genericpath import exists
 import os
+import re
 import zipfile
 from pathlib import Path
 import shutil
@@ -11,7 +12,26 @@ ADDON_SOURCE_DIRNAME = "python_classes"
 RESOURCES_DIRNAME = "resources"
 VERSION_FILEPATH = os.path.join(Path(__file__).parent.parent.parent, "VERSION")
 
+
+def read_version():
+    with open(VERSION_FILEPATH, "r") as f:
+        return f.read().strip()
+
+
+def sync_manifest_version():
+    """Sync blender_manifest.toml version with VERSION file."""
+    version = read_version().replace("_", ".")
+    manifest_path = "blender_manifest.toml"
+    with open(manifest_path, "r") as f:
+        content = f.read()
+    content = re.sub(r'version = "[^"]+"', f'version = "{version}"', content)
+    with open(manifest_path, "w") as f:
+        f.write(content)
+    print(f"Synced manifest version to {version}")
+
+
 def setup_addon_directory():
+    sync_manifest_version()
     plateform_name = "windows" if platform.system() == "Windows" else "linux" if platform.system() == "Linux" else "macOS"
     version = read_version()
     addon_dirpath = os.path.join(TMP_DIRPATH, f"modular_tree_{version}_{plateform_name}")
@@ -31,6 +51,7 @@ def setup_addon_directory():
             shutil.copytree(os.path.join(".",f), os.path.join(root, f))
 
     return addon_dirpath
+
 
 def create_zip(input_dir, output_dir):
     basename = os.path.join(output_dir, Path(input_dir).stem)
@@ -57,9 +78,6 @@ def list_files(root_directory):
         for f in files:
             print('{}{}'.format(subindent, f))
 
-def read_version():
-    with open(VERSION_FILEPATH, "r") as f:
-        return f.read()
 
 if __name__ == "__main__":
     addon_dirpath = setup_addon_directory()
