@@ -1,19 +1,27 @@
+from __future__ import annotations
+
 import time
 import numpy as np
 import bpy
 from ...m_tree_wrapper import lazy_m_tree as m_tree
-from ..base_types.node import MtreeNode 
+from ..base_types.node import MtreeNode
+
 
 def on_update_prop(node, context):
     node.build_tree()
+
 
 class TreeMesherNode(bpy.types.Node, MtreeNode):
     bl_idname = "mt_MesherNode"
     bl_label = "Tree Mesher"
 
-    radial_resolution : bpy.props.IntProperty(name="Radial Resolution", default=32, min=3, update=on_update_prop)
-    smoothness : bpy.props.IntProperty(name="smoothness", default=4, min=0, update=on_update_prop)
-    tree_object : bpy.props.StringProperty(default="")
+    radial_resolution: bpy.props.IntProperty(name="Radial Resolution", default=32, min=3, update=on_update_prop)
+    smoothness: bpy.props.IntProperty(name="smoothness", default=4, min=0, update=on_update_prop)
+    tree_object: bpy.props.StringProperty(default="")
+
+    # Status feedback properties
+    status_message: bpy.props.StringProperty(default="")
+    status_is_error: bpy.props.BoolProperty(default=False)
 
     def init(self, context):
         self.add_output("mt_TreeSocket", "Tree", is_property=False)
@@ -43,6 +51,14 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
 
     def draw(self, context, layout):
         valid_tree = self.get_tree_validity()
+
+        # Show status message if present
+        if self.status_message:
+            status_row = layout.row()
+            status_row.alert = self.status_is_error
+            icon = 'ERROR' if self.status_is_error else 'CHECKMARK'
+            status_row.label(text=self.status_message, icon=icon)
+
         generate_row = layout.row()
         generate_row.enabled = valid_tree
         self.draw_generate(generate_row)
@@ -54,13 +70,27 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
 
     def build_tree(self):
         if not self.get_tree_validity():
+            self.status_message = "Connect a Trunk node to generate"
+            self.status_is_error = True
             return
-        tree = m_tree.Tree()
-        trunk_function = self.outputs[0].links[0].to_node.construct_function()
-        tree.set_trunk_function(trunk_function)
-        tree.execute_functions()
-        cpp_mesh = self.mesh_tree(tree)
-        self.output_object(cpp_mesh)
+
+        self.status_message = ""
+        self.status_is_error = False
+
+        try:
+            start_time = time.time()
+            tree = m_tree.Tree()
+            trunk_function = self.outputs[0].links[0].to_node.construct_function()
+            tree.set_trunk_function(trunk_function)
+            tree.execute_functions()
+            cpp_mesh = self.mesh_tree(tree)
+            self.output_object(cpp_mesh)
+            elapsed = time.time() - start_time
+            self.status_message = f"Generated in {elapsed:.2f}s"
+            self.status_is_error = False
+        except Exception as e:
+            self.status_message = f"Error: {str(e)}"
+            self.status_is_error = True
     
     def mesh_tree(self, tree):
         mesher = m_tree.ManifoldMesher()
