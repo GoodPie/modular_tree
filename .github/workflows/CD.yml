@@ -25,7 +25,7 @@ jobs:
       - name: Run Tests
         run: |
           cd m_tree/build
-          ./binaries/m_tree_tests
+          ctest --output-on-failure -C Release
 
   build-wheels:
     needs: test
