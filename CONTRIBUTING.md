@@ -8,6 +8,7 @@ This guide covers development setup and the C++ library architecture for contrib
 - Python 3.9+
 - C++17 compatible compiler
 - Blender 5.0 or later (for addon development)
+- [uv](https://docs.astral.sh/uv/) (recommended for fast Python tool management)
 
 ## Getting Started
 
@@ -35,6 +36,12 @@ This guide covers development setup and the C++ library architecture for contrib
    python .github/scripts/setup_addon.py
    ```
    Output goes to `tmp/` as a zip file.
+
+5. Install pre-commit hooks (recommended):
+   ```bash
+   uvx pre-commit install
+   ```
+   This runs linting and formatting checks automatically on each commit.
 
 ## Manual Build
 

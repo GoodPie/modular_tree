@@ -1,5 +1,9 @@
 # Mtree
 
+[![Build and Release](https://github.com/GoodPie/modular_tree/actions/workflows/CD.yml/badge.svg)](https://github.com/GoodPie/modular_tree/actions/workflows/CD.yml)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
 A procedural tree generator addon for Blender using a node-based workflow.
 
 > **Note:** Maintained fork of [Mtree by MaximeHerpin](https://github.com/MaximeHerpin/modular_tree).
@@ -79,9 +83,26 @@ After generating a tree, click "Add Leaves" in Tree Mesher to configure:
 - **Scale/Rotation Variation** - Natural randomness
 - **Leaf Object** - Use a custom leaf mesh
 
+## Development
+
+This project uses modern Python tooling:
+
+- **[Ruff](https://docs.astral.sh/ruff/)** - Fast Python linter and formatter
+- **[pre-commit](https://pre-commit.com/)** - Git hooks for code quality
+- **[clang-format](https://clang.llvm.org/docs/ClangFormat.html)** - C++ code formatting
+
+To set up the development environment:
+
+```bash
+# Install pre-commit hooks (requires uv)
+uvx pre-commit install
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for full development setup and build instructions.
+
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and build instructions.
+For detailed build instructions, architecture overview, and C++ library usage, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
