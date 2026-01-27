@@ -23,7 +23,7 @@ def sync_manifest_version():
     manifest_path = "blender_manifest.toml"
     with open(manifest_path, "r") as f:
         content = f.read()
-    content = re.sub(r'version = "[^"]+"', f'version = "{version}"', content)
+    content = re.sub(r'^version = "[^"]+"', f'version = "{version}"', content, flags=re.MULTILINE)
     with open(manifest_path, "w") as f:
         f.write(content)
     print(f"Synced manifest version to {version}")
