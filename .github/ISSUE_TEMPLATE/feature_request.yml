@@ -1,0 +1,75 @@
+name: Feature Request
+description: Suggest a new feature or enhancement for Mtree
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a feature! Please describe your idea below.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear description of the feature you'd like
+      placeholder: Describe the feature or enhancement
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of the addon would this affect?
+      options:
+        - Addon UI / Node Editor
+        - Tree generation (C++ core)
+        - Mesh output
+        - New node type
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case
+      description: What problem does this solve? How would you use this feature?
+      placeholder: |
+        I'm trying to create trees that...
+        This would help with...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: How do you envision this working? Include node parameters, UI changes, etc.
+      placeholder: |
+        A new node called X that...
+        A parameter on the Y node that...
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Are there other ways to achieve this currently? What workarounds have you tried?
+      placeholder: Describe any alternative solutions or workarounds
+    validations:
+      required: false
+
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Links to examples, papers, images, or other addons that demonstrate similar functionality
+      placeholder: |
+        - Link to reference image
+        - Similar feature in another tool
+    validations:
+      required: false
