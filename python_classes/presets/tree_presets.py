@@ -113,10 +113,11 @@ def _generate_random_params() -> dict[str, Any]:
 
 
 def _wrap_property_value(key: str, value: float):
-    """Wrap value in ConstantProperty if the parameter requires it."""
+    """Wrap value in PropertyWrapper(ConstantProperty) if the parameter requires it."""
     if key in PROPERTY_WRAPPER_PARAMS:
         from ..m_tree_wrapper import lazy_m_tree as m_tree
-        return m_tree.ConstantProperty(float(value))
+        constant = m_tree.ConstantProperty(float(value))
+        return m_tree.PropertyWrapper(constant)
     return value
 
 
