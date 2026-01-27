@@ -16,5 +16,9 @@ project(m_tree)
 
 add_subdirectory(./source)
 add_subdirectory(./python_bindings)
-add_subdirectory(./tests)
+
+# Only build tests when not building as a wheel
+if(NOT DEFINED SKBUILD_PROJECT_NAME)
+    add_subdirectory(./tests)
+endif()
 

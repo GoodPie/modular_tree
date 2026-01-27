@@ -1,0 +1,13 @@
+[build-system]
+requires = ["scikit-build-core>=0.5", "pybind11"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "m_tree"
+version = "5.0.0"
+description = "Procedural 3D tree generation library"
+requires-python = ">=3.11"
+
+[tool.scikit-build]
+wheel.packages = []
+cmake.verbose = true

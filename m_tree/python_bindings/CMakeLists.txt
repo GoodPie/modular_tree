@@ -19,3 +19,8 @@ file(GLOB_RECURSE sources
 
 pybind11_add_module(m_tree ${sources})
 target_link_libraries(m_tree PRIVATE m_tree-lib)
+
+# Install target for scikit-build-core wheel builds
+if(DEFINED SKBUILD_PROJECT_NAME)
+    install(TARGETS m_tree LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})
+endif()

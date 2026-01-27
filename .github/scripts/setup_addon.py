@@ -1,10 +1,9 @@
-from genericpath import exists
+import glob
 import os
 import re
 import zipfile
 from pathlib import Path
 import shutil
-import platform
 
 
 TMP_DIRPATH = r"./tmp"
@@ -30,25 +29,53 @@ def sync_manifest_version():
     print(f"Synced manifest version to {version}")
 
 
+def update_manifest_wheels(manifest_path, wheel_files):
+    """Update manifest with wheel paths."""
+    with open(manifest_path, "r") as f:
+        content = f.read()
+
+    # Format wheel list for TOML
+    wheel_list = ",\n    ".join(f'"{whl}"' for whl in wheel_files)
+    wheels_toml = f"wheels = [\n    {wheel_list}\n]"
+
+    # Replace existing wheels line
+    content = re.sub(r'wheels = \[\]', wheels_toml, content)
+
+    with open(manifest_path, "w") as f:
+        f.write(content)
+    print(f"Updated manifest with {len(wheel_files)} wheels")
+
+
 def setup_addon_directory():
     sync_manifest_version()
-    plateform_name = "windows" if platform.system() == "Windows" else "linux" if platform.system() == "Linux" else "macOS"
     version = read_version()
-    addon_dirpath = os.path.join(TMP_DIRPATH, f"modular_tree_{version}_{plateform_name}")
+    addon_dirpath = os.path.join(TMP_DIRPATH, f"modular_tree_{version}")
     root = os.path.join(addon_dirpath, "modular_tree")
-    Path(root).mkdir(exist_ok=True, parents=True)
+    wheels_dir = os.path.join(root, "wheels")
+    Path(wheels_dir).mkdir(exist_ok=True, parents=True)
 
     all_files = os.listdir(".")
 
-
-    if not [i for i in all_files if i.endswith(".pyd") or i.endswith(".so")]:
-        list_files(".")
-        raise Exception("no libraries were output")
+    # Copy addon files
     for f in all_files:
-        if f.endswith(".py") or f.endswith(".pyd") or f.endswith(".so") or f == "blender_manifest.toml":
-            shutil.copy2(os.path.join(".",f), root)
+        if f.endswith(".py") or f == "blender_manifest.toml":
+            shutil.copy2(os.path.join(".", f), root)
         elif f == ADDON_SOURCE_DIRNAME or f == RESOURCES_DIRNAME:
-            shutil.copytree(os.path.join(".",f), os.path.join(root, f))
+            shutil.copytree(os.path.join(".", f), os.path.join(root, f))
+
+    # Copy wheels from downloaded artifacts
+    wheel_files = []
+    for whl in glob.glob("wheels/**/*.whl", recursive=True):
+        shutil.copy2(whl, wheels_dir)
+        wheel_files.append(f"./wheels/{os.path.basename(whl)}")
+        print(f"Copied wheel: {whl}")
+
+    if not wheel_files:
+        list_files(".")
+        raise Exception("No wheel files found in wheels/ directory")
+
+    # Update manifest with wheel paths
+    update_manifest_wheels(os.path.join(root, "blender_manifest.toml"), wheel_files)
 
     return addon_dirpath
 
@@ -69,7 +96,6 @@ def list_files(root_directory):
                 break
         if should_skip:
             continue
-
 
         level = root.replace(root_directory, '').count(os.sep)
         indent = ' ' * 4 * (level)
