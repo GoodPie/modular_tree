@@ -55,7 +55,7 @@ TREE_PRESETS: dict[str, TreePreset] = {
         description='Broad spreading tree with thick trunk',
         branches={
             'length': 12,
-            'branches_density': 3,
+            'branches_density': 0.8,
             'start_angle': 60,
             'gravity_strength': 15,
             'up_attraction': 0.3,
@@ -69,7 +69,7 @@ TREE_PRESETS: dict[str, TreePreset] = {
         description='Tall conifer with upward branches',
         branches={
             'length': 6,
-            'branches_density': 4,
+            'branches_density': 1.0,
             'start_angle': 80,
             'gravity_strength': 2,
             'up_attraction': 0.8,
@@ -83,7 +83,7 @@ TREE_PRESETS: dict[str, TreePreset] = {
         description='Drooping branches with weeping form',
         branches={
             'length': 15,
-            'branches_density': 5,
+            'branches_density': 0.6,
             'start_angle': 45,
             'gravity_strength': 30,
             'up_attraction': -0.2,
@@ -103,7 +103,7 @@ def _generate_random_params() -> dict[str, Any]:
     """Generate randomized branch parameters."""
     return {
         'length': randint(5, 15),
-        'branches_density': 1 + randint(0, 4),
+        'branches_density': 0.4 + (randint(0, 8) / 10),  # 0.4 to 1.2
         'start_angle': randint(30, 80),
         'gravity_strength': randint(5, 20),
         'up_attraction': 0.1 + (randint(0, 5) / 10),
