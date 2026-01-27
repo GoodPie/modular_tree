@@ -1,22 +1,25 @@
 import bpy
-from ..base_types.socket import MtreeSocket
+
 from ...m_tree_wrapper import lazy_m_tree
+from ..base_types.socket import MtreeSocket
+
 
 class MtreePropertySocket(bpy.types.NodeSocket, MtreeSocket):
-    bl_idname = 'mt_PropertySocket'
+    bl_idname = "mt_PropertySocket"
     bl_label = "Mtree Property Socket"
 
-    color = (.8, 0.8, 0.8, 0.5)
+    color = (0.8, 0.8, 0.8, 0.5)
 
-    min_value : bpy.props.FloatProperty(default = -float('inf'))
-    max_value : bpy.props.FloatProperty(default = float('inf'))
+    min_value: bpy.props.FloatProperty(default=-float("inf"))
+    max_value: bpy.props.FloatProperty(default=float("inf"))
+
     def update_value(self, context):
         self["property_value"] = max(self.min_value, min(self.max_value, self.property_value))
         mesher = self.node.get_mesher()
         if mesher is not None:
             mesher.build_tree()
-    
-    property_value : bpy.props.FloatProperty(default = 0, update=update_value)
+
+    property_value: bpy.props.FloatProperty(default=0, update=update_value)
 
     def get_property(self):
         if self.is_linked:
@@ -27,10 +30,9 @@ class MtreePropertySocket(bpy.types.NodeSocket, MtreeSocket):
             wrapper = lazy_m_tree.PropertyWrapper()
             wrapper.set_constant_property(property)
             return wrapper
-    
+
     def draw(self, context, layout, node, text):
         if self.is_output or self.is_linked:
             layout.label(text=text)
         else:
             layout.prop(self, "property_value", text=text)
-    

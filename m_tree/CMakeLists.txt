@@ -22,4 +22,3 @@ if(NOT DEFINED SKBUILD_PROJECT_NAME)
     enable_testing()
     add_subdirectory(./tests)
 endif()
-

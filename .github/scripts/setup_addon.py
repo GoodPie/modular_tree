@@ -1,10 +1,8 @@
 import glob
 import os
 import re
-import zipfile
-from pathlib import Path
 import shutil
-
+from pathlib import Path
 
 TMP_DIRPATH = r"./tmp"
 ADDON_SOURCE_DIRNAME = "python_classes"
@@ -13,7 +11,7 @@ VERSION_FILEPATH = os.path.join(Path(__file__).parent.parent.parent, "VERSION")
 
 
 def read_version():
-    with open(VERSION_FILEPATH, "r") as f:
+    with open(VERSION_FILEPATH) as f:
         return f.read().strip()
 
 
@@ -21,7 +19,7 @@ def sync_manifest_version():
     """Sync blender_manifest.toml version with VERSION file."""
     version = read_version().replace("_", ".")
     manifest_path = "blender_manifest.toml"
-    with open(manifest_path, "r") as f:
+    with open(manifest_path) as f:
         content = f.read()
     content = re.sub(r'^version = "[^"]+"', f'version = "{version}"', content, flags=re.MULTILINE)
     with open(manifest_path, "w") as f:
@@ -31,7 +29,7 @@ def sync_manifest_version():
 
 def update_manifest_wheels(manifest_path, wheel_files):
     """Update manifest with wheel paths."""
-    with open(manifest_path, "r") as f:
+    with open(manifest_path) as f:
         content = f.read()
 
     # Format wheel list for TOML
@@ -39,7 +37,7 @@ def update_manifest_wheels(manifest_path, wheel_files):
     wheels_toml = f"wheels = [\n    {wheel_list}\n]"
 
     # Replace existing wheels line
-    content = re.sub(r'wheels = \[\]', wheels_toml, content)
+    content = re.sub(r"wheels = \[\]", wheels_toml, content)
 
     with open(manifest_path, "w") as f:
         f.write(content)
@@ -60,7 +58,7 @@ def setup_addon_directory():
     for f in all_files:
         if f.endswith(".py") or f == "blender_manifest.toml":
             shutil.copy2(os.path.join(".", f), root)
-        elif f == ADDON_SOURCE_DIRNAME or f == RESOURCES_DIRNAME:
+        elif f in (ADDON_SOURCE_DIRNAME, RESOURCES_DIRNAME):
             shutil.copytree(os.path.join(".", f), os.path.join(root, f))
 
     # Copy wheels from downloaded artifacts
@@ -97,12 +95,12 @@ def list_files(root_directory):
         if should_skip:
             continue
 
-        level = root.replace(root_directory, '').count(os.sep)
-        indent = ' ' * 4 * (level)
-        print('{}{}/'.format(indent, os.path.basename(root)))
-        subindent = ' ' * 4 * (level + 1)
+        level = root.replace(root_directory, "").count(os.sep)
+        indent = " " * 4 * (level)
+        print(f"{indent}{os.path.basename(root)}/")
+        subindent = " " * 4 * (level + 1)
         for f in files:
-            print('{}{}'.format(subindent, f))
+            print(f"{subindent}{f}")
 
 
 if __name__ == "__main__":

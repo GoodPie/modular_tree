@@ -1,6 +1,4 @@
-from . import operators
-from . import nodes
-from . import panels
+from . import nodes, operators, panels
 
 
 def register():

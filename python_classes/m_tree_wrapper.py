@@ -14,6 +14,7 @@ def get_m_tree():
     global _m_tree
     if _m_tree is None:
         from m_tree import m_tree
+
         _m_tree = m_tree
     return _m_tree
 

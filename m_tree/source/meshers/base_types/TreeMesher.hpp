@@ -4,9 +4,9 @@
 
 namespace Mtree
 {
-	class TreeMesher
-	{
-	public:
-		virtual Mesh mesh_tree(Tree& tree) = 0;
-	};
-}
+class TreeMesher
+{
+  public:
+	virtual Mesh mesh_tree(Tree& tree) = 0;
+};
+} // namespace Mtree

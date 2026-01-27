@@ -1,39 +1,36 @@
 from __future__ import annotations
 
-from random import randint
 import time
+from random import randint
 
 import bpy
-import bmesh
-import gpu
 import numpy as np
 from bpy.utils import register_class, unregister_class
-from gpu_extras.batch import batch_for_shader
 
 from .m_tree_wrapper import lazy_m_tree as m_tree
-from .presets import apply_preset, get_preset_items, _generate_random_params
+from .presets import apply_preset, get_preset_items
 from .resources.node_groups import distribute_leaves
 
 
 class ExecuteNodeFunction(bpy.types.Operator):
     bl_idname = "mtree.node_function"
     bl_label = "Node Function callback"
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {"REGISTER", "UNDO"}
 
     node_tree_name: bpy.props.StringProperty()
     node_name: bpy.props.StringProperty()
-    function_name : bpy.props.StringProperty()
+    function_name: bpy.props.StringProperty()
 
     def execute(self, context):
         node = bpy.data.node_groups[self.node_tree_name].nodes[self.node_name]
         getattr(node, self.function_name)()
-        return {'FINISHED'}
+        return {"FINISHED"}
 
 
 class AddLeavesModifier(bpy.types.Operator):
     bl_idname = "mtree.add_leaves"
     bl_label = "Add leaves distribution modifier to tree"
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {"REGISTER", "UNDO"}
 
     object_id: bpy.props.StringProperty()
 
@@ -41,30 +38,22 @@ class AddLeavesModifier(bpy.types.Operator):
         ob = bpy.data.objects.get(self.object_id)
         if ob is not None:
             distribute_leaves(ob)
-        return {'FINISHED'}
+        return {"FINISHED"}
 
 
 class QuickGenerateTree(bpy.types.Operator):
     """Generate a random tree with preset settings"""
+
     bl_idname = "mtree.quick_generate"
     bl_label = "Generate Random Tree"
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {"REGISTER", "UNDO"}
 
     seed: bpy.props.IntProperty(
-        name="Seed",
-        default=0,
-        min=0,
-        description="Random seed (0 = random)"
+        name="Seed", default=0, min=0, description="Random seed (0 = random)"
     )
-    preset: bpy.props.EnumProperty(
-        name="Preset",
-        items=get_preset_items(),
-        default='RANDOM'
-    )
+    preset: bpy.props.EnumProperty(name="Preset", items=get_preset_items(), default="RANDOM")
     add_leaves: bpy.props.BoolProperty(
-        name="Add Leaves",
-        default=True,
-        description="Automatically add leaf distribution"
+        name="Add Leaves", default=True, description="Automatically add leaf distribution"
     )
 
     def execute(self, context):
@@ -107,12 +96,12 @@ class QuickGenerateTree(bpy.types.Operator):
                 distribute_leaves(obj)
 
             elapsed = time.time() - start_time
-            self.report({'INFO'}, f"Generated tree (seed={seed}) in {elapsed:.2f}s")
-            return {'FINISHED'}
+            self.report({"INFO"}, f"Generated tree (seed={seed}) in {elapsed:.2f}s")
+            return {"FINISHED"}
 
         except Exception as e:
-            self.report({'ERROR'}, f"Failed to generate tree: {str(e)}")
-            return {'CANCELLED'}
+            self.report({"ERROR"}, f"Failed to generate tree: {str(e)}")
+            return {"CANCELLED"}
 
     def _create_blender_object(self, context, cpp_mesh, name: str) -> None:
         """Create Blender mesh object from C++ mesh data."""
@@ -130,10 +119,10 @@ class QuickGenerateTree(bpy.types.Operator):
 
         mesh.vertices.add(len(verts) // 3)
         mesh.vertices.foreach_set("co", verts)
-        mesh.attributes.new(name='radius', type='FLOAT', domain='POINT')
-        mesh.attributes['radius'].data.foreach_set('value', radii)
-        mesh.attributes.new(name='direction', type='FLOAT_VECTOR', domain='POINT')
-        mesh.attributes['direction'].data.foreach_set('vector', directions)
+        mesh.attributes.new(name="radius", type="FLOAT", domain="POINT")
+        mesh.attributes["radius"].data.foreach_set("value", radii)
+        mesh.attributes.new(name="direction", type="FLOAT_VECTOR", domain="POINT")
+        mesh.attributes["direction"].data.foreach_set("vector", directions)
 
         mesh.loops.add(len(faces))
         mesh.loops.foreach_set("vertex_index", faces)
@@ -143,7 +132,7 @@ class QuickGenerateTree(bpy.types.Operator):
         mesh.polygons.add(len(faces) // 4)
         mesh.polygons.foreach_set("loop_start", loop_start)
         mesh.polygons.foreach_set("loop_total", loop_total)
-        mesh.polygons.foreach_set('use_smooth', np.ones(len(faces) // 4, dtype=bool))
+        mesh.polygons.foreach_set("use_smooth", np.ones(len(faces) // 4, dtype=bool))
 
         # UVs
         uv_data = cpp_mesh.get_uvs()
@@ -167,25 +156,23 @@ class QuickGenerateTree(bpy.types.Operator):
 
 class ApplyBranchNodePreset(bpy.types.Operator):
     """Apply a preset to a branch node"""
+
     bl_idname = "mtree.apply_branch_node_preset"
     bl_label = "Apply Preset"
-    bl_options = {'REGISTER', 'UNDO'}
+    bl_options = {"REGISTER", "UNDO"}
 
-    preset: bpy.props.EnumProperty(
-        name="Preset",
-        items=get_preset_items()
-    )
+    preset: bpy.props.EnumProperty(name="Preset", items=get_preset_items())
     node_tree_name: bpy.props.StringProperty()
     node_name: bpy.props.StringProperty()
 
     def execute(self, context):
         node_tree = bpy.data.node_groups.get(self.node_tree_name)
         if not node_tree:
-            return {'CANCELLED'}
+            return {"CANCELLED"}
         node = node_tree.nodes.get(self.node_name)
-        if node and hasattr(node, 'apply_preset'):
+        if node and hasattr(node, "apply_preset"):
             node.apply_preset(self.preset)
-        return {'FINISHED'}
+        return {"FINISHED"}
 
 
 def register():

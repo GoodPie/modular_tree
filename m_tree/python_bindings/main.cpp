@@ -75,7 +75,7 @@ PYBIND11_MODULE(m_tree, m) {
         .def_readwrite("constant_growth", &PipeRadiusFunction::constant_growth)
         .def_readwrite("power", &PipeRadiusFunction::power)
         ;
-    
+
     py::class_<BranchFunction, std::shared_ptr<BranchFunction>, TreeFunction>(m, "BranchFunction")
         .def(py::init<>())
         .def_readwrite("length", &BranchFunction::length)
@@ -171,8 +171,8 @@ PYBIND11_MODULE(m_tree, m) {
                     ptr[i*3 + 2] = attribute.data[i][2];
                 }
                 return result;
-            })        
-        .def("get_polygons", [](const Mesh& mesh) 
+            })
+        .def("get_polygons", [](const Mesh& mesh)
             {
                 py::array_t<int> result(mesh.polygons.size() * 4);
              	py::buffer_info buff = result.request();
@@ -225,7 +225,7 @@ PYBIND11_MODULE(m_tree, m) {
     py::class_<BasicMesher>(m, "BasicMesher")
         .def(py::init<>())
         .def("mesh_tree", &BasicMesher::mesh_tree);
-    
+
     py::class_<ManifoldMesher>(m, "ManifoldMesher")
         .def(py::init<>())
         .def_readwrite("radial_n_points", &ManifoldMesher::radial_resolution)

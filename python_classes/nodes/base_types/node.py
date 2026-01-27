@@ -2,10 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import bpy
-
 if TYPE_CHECKING:
-    from bpy.types import NodeTree, NodeSocket
+    from bpy.types import NodeSocket, NodeTree
 
 
 class MtreeNode:
@@ -47,9 +45,8 @@ class MtreeNode:
             setattr(socket, key, value)
         return socket
 
-
     def get_mesher_rec(self, seen_nodes: set) -> MtreeNode | None:
-        if self.bl_idname == 'mt_MesherNode':
+        if self.bl_idname == "mt_MesherNode":
             return self
 
         seen_nodes.add(self.name)
@@ -83,16 +80,15 @@ class MtreeNode:
         pass
 
 
-
 class MtreeFunctionNode(MtreeNode):
-    exposed_parameters = [] # List defined for each sub class
+    exposed_parameters = []  # List defined for each sub class
     advanced_parameters = []
-    tree_function = None # tree function type, as defined in m_tree. Should be overriden 
+    tree_function = None  # tree function type, as defined in m_tree. Should be overriden
 
     def draw(self, context, layout):
         for parameter in self.exposed_parameters:
             layout.prop(self, parameter)
-        
+
     def draw_inspector(self, context, layout):
         for parameter in self.exposed_parameters + self.advanced_parameters:
             layout.prop(self, parameter)
@@ -101,15 +97,17 @@ class MtreeFunctionNode(MtreeNode):
         function_instance = self.tree_function()
         for parameter in self.exposed_parameters:
             setattr(function_instance, parameter, getattr(self, parameter))
-        
+
         for input_socket in self.inputs:
             if input_socket.is_property:
                 if input_socket.bl_idname == "mt_PropertySocket":
                     property = input_socket.get_property()
                     setattr(function_instance, input_socket.property_name, property)
                 else:
-                    setattr(function_instance, input_socket.property_name, input_socket.property_value)
-        
+                    setattr(
+                        function_instance, input_socket.property_name, input_socket.property_value
+                    )
+
         for child in self.get_child_nodes():
             if isinstance(child, MtreeFunctionNode):
                 child_function = child.construct_function()
@@ -119,7 +117,7 @@ class MtreeFunctionNode(MtreeNode):
 
 
 class MtreePropertyNode(MtreeNode):
-    property_type = None # tree Property type, as defined in m_tree. Should be overriden 
+    property_type = None  # tree Property type, as defined in m_tree. Should be overriden
 
     def get_property(self):
         property = self.property_type()
@@ -127,4 +125,3 @@ class MtreePropertyNode(MtreeNode):
             if input_socket.is_property:
                 setattr(property, input_socket.property_name, input_socket.property_value)
         return property
-    

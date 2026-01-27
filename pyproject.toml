@@ -2,6 +2,7 @@
 target-version = "py311"
 line-length = 100
 src = ["python_classes", "."]
+exclude = ["m_tree/dependencies"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
@@ -9,6 +10,7 @@ ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
+"m_tree/python_bindings/__init__.py" = ["F403"]
 
 [tool.ruff.format]
 quote-style = "double"
