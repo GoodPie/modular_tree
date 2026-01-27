@@ -1,51 +1,74 @@
-name: test_github_actions
+name: Build and Release
 on: [push]
+
 jobs:
-  build:
+  build-wheels:
     strategy:
       matrix:
-        include:
-          - os: windows-latest
-            extension: bat
-            name: windows
-          - os: ubuntu-latest
-            extension: sh
-            name: linux
-          - os: macos-latest
-            extension: osx
-            name: macOS
+        os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - name: checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           submodules: true
-      - name: setup python
-        uses: actions/setup-python@v5
+      - uses: pypa/cibuildwheel@v2.21
         with:
-          python-version: 3.11
-      - name: build
-        run: ./build_mtree.${{ matrix.extension }}
-      - name: package addon
+          package-dir: m_tree
+        env:
+          CIBW_BUILD: cp311-manylinux_x86_64 cp311-macosx_arm64 cp311-win_amd64
+          CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
+          CIBW_BEFORE_BUILD_LINUX: >
+            dnf install -y zip unzip tar curl &&
+            cd {package}/dependencies/vcpkg &&
+            ./bootstrap-vcpkg.sh &&
+            ./vcpkg install eigen3:x64-linux
+          CIBW_BEFORE_BUILD_MACOS: >
+            cd {package}/dependencies/vcpkg &&
+            ./bootstrap-vcpkg.sh &&
+            ./vcpkg install eigen3:arm64-osx
+          CIBW_BEFORE_BUILD_WINDOWS: >
+            cd /d {package}\dependencies\vcpkg &&
+            bootstrap-vcpkg.bat &&
+            vcpkg install eigen3:x64-windows
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}
+          path: ./wheelhouse/*.whl
+
+  package-addon:
+    needs: build-wheels
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/download-artifact@v4
+        with:
+          path: wheels
+          merge-multiple: true
+      - name: Display downloaded wheels
+        run: ls -R wheels
+      - name: Package addon
         run: python .github/scripts/setup_addon.py
-      - name: upload zipped addon
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: modular_tree_${{ matrix.name }}
+          name: modular_tree_extension
           path: tmp/*.zip
-  
+
   release:
-    needs: build
+    needs: package-addon
     runs-on: ubuntu-latest
     env:
       STATUS: ${{ !endsWith(github.ref, 'master') && 'alpha' || '' }}
     steps:
-      - name: checkout
-        uses: actions/checkout@v4
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: modular_tree_extension
+          path: release
       - name: Display structure of downloaded files
-        run: ls -R
+        run: ls -R release
       - name: Get version
         id: vars
         run: |
@@ -56,11 +79,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          files: |
-            ./modular_tree_windows/modular_tree_${{ steps.vars.outputs.raw_version }}_windows.zip
-            ./modular_tree_linux/modular_tree_${{ steps.vars.outputs.raw_version }}_linux.zip
-            ./modular_tree_macOS/modular_tree_${{ steps.vars.outputs.raw_version }}_macOS.zip
+          files: release/*.zip
           name: Release V${{ steps.vars.outputs.version }}${{ env.STATUS }}
           tag_name: ${{ steps.vars.outputs.version }}${{ env.STATUS }}
           body: V${{ steps.vars.outputs.version }}
-
