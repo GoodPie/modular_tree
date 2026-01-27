@@ -86,6 +86,23 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
                 return socket
         return None
 
+    def apply_preset(self, preset_name: str):
+        """Apply a preset by setting socket property values."""
+        from ...presets import TREE_PRESETS, _generate_random_params
+
+        if preset_name == 'RANDOM':
+            params = _generate_random_params()
+        else:
+            preset = TREE_PRESETS.get(preset_name)
+            if not preset:
+                return
+            params = preset.branches
+
+        for param_name, param_value in params.items():
+            socket = self._get_socket_by_property(param_name)
+            if socket:
+                socket.property_value = float(param_value)
+
     def _draw_section(self, layout, title: str, show_prop: str, params: list) -> None:
         """Draw a collapsible section with parameters."""
         box = layout.box()
@@ -109,6 +126,17 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
 
     def draw_inspector(self, context, layout):
         """Draw organized parameters in the Properties panel (N key)."""
+        # Preset buttons
+        box = layout.box()
+        box.label(text="Presets", icon='PRESET')
+        row = box.row(align=True)
+        for preset_name in ['OAK', 'PINE', 'WILLOW', 'RANDOM']:
+            op = row.operator("mtree.apply_branch_node_preset", text=preset_name.capitalize())
+            op.preset = preset_name
+            op.node_tree_name = self.id_data.name
+            op.node_name = self.name
+
+        # Existing sections
         self._draw_section(layout, "Basic", "show_basic", BASIC_PARAMS)
         self._draw_section(layout, "Shape", "show_shape", SHAPE_PARAMS)
         self._draw_section(layout, "Splitting", "show_split", SPLIT_PARAMS)

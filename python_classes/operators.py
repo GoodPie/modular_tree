@@ -11,7 +11,7 @@ from bpy.utils import register_class, unregister_class
 from gpu_extras.batch import batch_for_shader
 
 from .m_tree_wrapper import lazy_m_tree as m_tree
-from .presets import apply_preset, get_preset_items
+from .presets import apply_preset, get_preset_items, _generate_random_params
 from .resources.node_groups import distribute_leaves
 
 
@@ -165,13 +165,38 @@ class QuickGenerateTree(bpy.types.Operator):
         layout.prop(self, "add_leaves")
 
 
+class ApplyBranchNodePreset(bpy.types.Operator):
+    """Apply a preset to a branch node"""
+    bl_idname = "mtree.apply_branch_node_preset"
+    bl_label = "Apply Preset"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    preset: bpy.props.EnumProperty(
+        name="Preset",
+        items=get_preset_items()
+    )
+    node_tree_name: bpy.props.StringProperty()
+    node_name: bpy.props.StringProperty()
+
+    def execute(self, context):
+        node_tree = bpy.data.node_groups.get(self.node_tree_name)
+        if not node_tree:
+            return {'CANCELLED'}
+        node = node_tree.nodes.get(self.node_name)
+        if node and hasattr(node, 'apply_preset'):
+            node.apply_preset(self.preset)
+        return {'FINISHED'}
+
+
 def register():
     register_class(ExecuteNodeFunction)
     register_class(AddLeavesModifier)
     register_class(QuickGenerateTree)
+    register_class(ApplyBranchNodePreset)
 
 
 def unregister():
     unregister_class(ExecuteNodeFunction)
     unregister_class(AddLeavesModifier)
     unregister_class(QuickGenerateTree)
+    unregister_class(ApplyBranchNodePreset)
