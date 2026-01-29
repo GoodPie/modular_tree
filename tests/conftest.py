@@ -15,6 +15,7 @@ PYTHON_CLASSES = PROJECT_ROOT / "python_classes"
 paths_to_add = [
     str(PYTHON_CLASSES),
     str(PYTHON_CLASSES / "presets"),
+    str(PYTHON_CLASSES / "pivot_painter"),
 ]
 
 for path in paths_to_add:
