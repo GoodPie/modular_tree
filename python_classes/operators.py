@@ -204,6 +204,27 @@ class ApplyBranchNodePreset(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class ApplyTrunkNodePreset(bpy.types.Operator):
+    """Apply a preset to a trunk node."""
+
+    bl_idname = "mtree.apply_trunk_node_preset"
+    bl_label = "Apply Preset"
+    bl_options = {"REGISTER", "UNDO"}
+
+    preset: bpy.props.EnumProperty(name="Preset", items=get_preset_items())
+    node_tree_name: bpy.props.StringProperty()
+    node_name: bpy.props.StringProperty()
+
+    def execute(self, context):
+        node_tree = bpy.data.node_groups.get(self.node_tree_name)
+        if not node_tree:
+            return {"CANCELLED"}
+        node = node_tree.nodes.get(self.node_name)
+        if node and hasattr(node, "apply_preset"):
+            node.apply_preset(self.preset)
+        return {"FINISHED"}
+
+
 # Registration
 
 _classes = [
@@ -212,6 +233,7 @@ _classes = [
     QuickGenerateTree,
     ExportPivotPainter,
     ApplyBranchNodePreset,
+    ApplyTrunkNodePreset,
 ]
 
 
