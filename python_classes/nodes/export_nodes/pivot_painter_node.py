@@ -20,9 +20,7 @@ class MTreePivotPainterExport(bpy.types.Node, MtreeNode):
         ],
         default="UE5",
     )
-    texture_size: bpy.props.IntProperty(
-        name="Texture Size", default=1024, min=64, max=4096
-    )
+    texture_size: bpy.props.IntProperty(name="Texture Size", default=1024, min=64, max=4096)
     export_path: bpy.props.StringProperty(
         name="Export Path",
         subtype="DIR_PATH",
@@ -63,9 +61,7 @@ class MTreePivotPainterExport(bpy.types.Node, MtreeNode):
         if len(self.inputs) == 0:
             return False
         tree_input = self.inputs[0]
-        if not tree_input.links:
-            return False
-        return True
+        return tree_input.links
 
     def _get_tree_object(self):
         """Get the tree object from the connected mesher node."""

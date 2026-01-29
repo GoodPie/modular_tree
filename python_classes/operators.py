@@ -58,9 +58,7 @@ class QuickGenerateTree(bpy.types.Operator):
     seed: bpy.props.IntProperty(
         name="Seed", default=0, min=0, description="Random seed (0 = random)"
     )
-    preset: bpy.props.EnumProperty(
-        name="Preset", items=get_preset_items(), default="RANDOM"
-    )
+    preset: bpy.props.EnumProperty(name="Preset", items=get_preset_items(), default="RANDOM")
     add_leaves: bpy.props.BoolProperty(
         name="Add Leaves", default=True, description="Automatically add leaf distribution"
     )
@@ -145,9 +143,7 @@ class ExportPivotPainter(bpy.types.Operator):
         ],
         default="UE5",
     )
-    texture_size: bpy.props.IntProperty(
-        name="Texture Size", default=1024, min=64, max=4096
-    )
+    texture_size: bpy.props.IntProperty(name="Texture Size", default=1024, min=64, max=4096)
     export_path: bpy.props.StringProperty(
         name="Export Path",
         subtype="DIR_PATH",

@@ -24,9 +24,7 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
     radial_resolution: bpy.props.IntProperty(
         name="Radial Resolution", default=32, min=3, update=on_update_prop
     )
-    smoothness: bpy.props.IntProperty(
-        name="smoothness", default=4, min=0, update=on_update_prop
-    )
+    smoothness: bpy.props.IntProperty(name="smoothness", default=4, min=0, update=on_update_prop)
     tree_object: bpy.props.StringProperty(default="")
 
     # Status feedback properties
