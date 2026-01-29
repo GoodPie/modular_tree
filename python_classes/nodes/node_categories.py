@@ -47,6 +47,13 @@ node_categories = [
             NodeItem("mt_RampPropertyNode"),
         ],
     ),
+    MTreeNodeCategory(
+        "Export",
+        "Export",
+        items=[
+            NodeItem("mt_PivotPainterExportNode"),
+        ],
+    ),
 ]
 
 

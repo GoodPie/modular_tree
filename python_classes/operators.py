@@ -33,6 +33,8 @@ class ExecuteNodeFunction(bpy.types.Operator):
 
 
 class AddLeavesModifier(bpy.types.Operator):
+    """Add leaves distribution modifier to tree."""
+
     bl_idname = "mtree.add_leaves"
     bl_label = "Add leaves distribution modifier to tree"
     bl_options = {"REGISTER", "UNDO"}
@@ -126,8 +128,70 @@ class QuickGenerateTree(bpy.types.Operator):
         layout.prop(self, "add_leaves")
 
 
+class ExportPivotPainter(bpy.types.Operator):
+    """Export Pivot Painter 2.0 data for game engines."""
+
+    bl_idname = "mtree.export_pivot_painter"
+    bl_label = "Export Pivot Painter"
+    bl_options = {"REGISTER", "UNDO"}
+
+    object_name: bpy.props.StringProperty(name="Object")
+    export_format: bpy.props.EnumProperty(
+        name="Format",
+        items=[
+            ("UE5", "Unreal Engine 5", "Export for UE5 with Nanite support"),
+            ("UE4", "Unreal Engine 4", "Export for UE4 Pivot Painter 2.0"),
+            ("UNITY", "Unity", "Export vertex colors for Unity"),
+        ],
+        default="UE5",
+    )
+    texture_size: bpy.props.IntProperty(
+        name="Texture Size", default=1024, min=64, max=4096
+    )
+    export_path: bpy.props.StringProperty(
+        name="Export Path",
+        subtype="DIR_PATH",
+        default="//pivot_painter/",
+    )
+
+    def execute(self, context):
+        obj = bpy.data.objects.get(self.object_name)
+        if obj is None or obj.type != "MESH":
+            self.report({"ERROR"}, "Invalid mesh object")
+            return {"CANCELLED"}
+
+        exporter = PivotPainterExporter(
+            mesh=obj.data,
+            export_format=ExportFormat[self.export_format],
+            texture_size=self.texture_size,
+            export_path=self.export_path,
+        )
+
+        result = exporter.export(obj.name)
+
+        if result.success:
+            self.report({"INFO"}, result.message)
+            return {"FINISHED"}
+        else:
+            self.report({"ERROR"}, result.message)
+            return {"CANCELLED"}
+
+    def invoke(self, context, event):
+        if context.active_object and context.active_object.type == "MESH":
+            self.object_name = context.active_object.name
+        return context.window_manager.invoke_props_dialog(self)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.prop(self, "object_name")
+        layout.prop(self, "export_format")
+        if self.export_format != "UNITY":
+            layout.prop(self, "texture_size")
+            layout.prop(self, "export_path")
+
+
 class ApplyBranchNodePreset(bpy.types.Operator):
-    """Apply a preset to a branch node"""
+    """Apply a preset to a branch node."""
 
     bl_idname = "mtree.apply_branch_node_preset"
     bl_label = "Apply Preset"
@@ -147,15 +211,22 @@ class ApplyBranchNodePreset(bpy.types.Operator):
         return {"FINISHED"}
 
 
+# Registration
+
+_classes = [
+    ExecuteNodeFunction,
+    AddLeavesModifier,
+    QuickGenerateTree,
+    ExportPivotPainter,
+    ApplyBranchNodePreset,
+]
+
+
 def register():
-    register_class(ExecuteNodeFunction)
-    register_class(AddLeavesModifier)
-    register_class(QuickGenerateTree)
-    register_class(ApplyBranchNodePreset)
+    for cls in _classes:
+        register_class(cls)
 
 
 def unregister():
-    unregister_class(ExecuteNodeFunction)
-    unregister_class(AddLeavesModifier)
-    unregister_class(QuickGenerateTree)
-    unregister_class(ApplyBranchNodePreset)
+    for cls in _classes:
+        unregister_class(cls)
