@@ -71,38 +71,41 @@ TREE_PRESETS: dict[str, TreePreset] = {
             "start_radius": 0.5,  # Thicker base
             "end_radius": 0.15,  # Less taper - branches into major limbs
             "shape": 0.5,  # More gradual taper
-            "up_attraction": 0.4,  # Slight lean is natural for oaks
+            "up_attraction": 0.5,  # Straighter trunk
         },
         branches={
-            "start": 0.0,  # Branches start at trunk base
-            "length": 10,  # Slightly shorter branches
-            "branches_density": 0.6,  # Fewer but larger branches
-            "start_angle": 70,  # Wider spread
-            "gravity_strength": 18,  # More droop
-            "up_attraction": 0.2,  # Less upward pull
-            "flatness": 0.4,  # More horizontal spread
-            "stiffness": 0.12,
+            "start": 0.15,  # Branches start slightly up the trunk
+            "length": 8,  # Shorter branches that split more
+            "branches_density": 1.8,  # Many branches to fill crown
+            "start_angle": 55,  # Less horizontal, more room to grow up
+            "gravity_strength": 6,  # Much less droop - branches hold up
+            "up_attraction": 0.45,  # More upward growth for dome shape
+            "flatness": 0.35,  # Slightly less flat
+            "stiffness": 0.2,  # Stiffer branches resist gravity
+            "split_proba": 0.65,  # More splitting for denser crown
         },
     ),
     "PINE": TreePreset(
         name="PINE",
         label="Pine",
-        description="Tall conifer with upward branches",
+        description="Tall conifer with horizontal tiered branches",
         trunk={
             "length": 18,  # Tall trunk
             "start_radius": 0.25,  # Thinner
             "end_radius": 0.03,  # Sharp taper
             "shape": 0.9,  # Aggressive taper at top
-            "up_attraction": 0.8,  # Very straight
+            "up_attraction": 0.95,  # Very straight trunk
         },
         branches={
-            "length": 6,
-            "branches_density": 1.0,
-            "start_angle": 80,
-            "gravity_strength": 2,
-            "up_attraction": 0.8,
-            "flatness": 0.1,
-            "stiffness": 0.3,
+            "start": 0.15,  # Branches start a bit up the trunk
+            "length": 5,  # Shorter, controlled branches
+            "branches_density": 0.8,  # Slightly less dense for distinct tiers
+            "start_angle": 85,  # Nearly horizontal
+            "gravity_strength": 10,  # Moderate droop for natural look
+            "up_attraction": 0.05,  # Very low - branches stay horizontal
+            "flatness": 0.65,  # Branches spread in horizontal plane
+            "stiffness": 0.2,  # Moderate stiffness
+            "split_proba": 0.35,  # Less splitting for cleaner conifer look
         },
     ),
     "WILLOW": TreePreset(
