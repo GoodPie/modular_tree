@@ -41,3 +41,4 @@ m_tree.egg-info/
 */binaries/
 tmp/*
 *.whl
+.venv/
