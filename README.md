@@ -17,6 +17,7 @@ A procedural tree generator addon for Blender using a node-based workflow.
 - **L-system growth** - Biologically-inspired growth simulation with apical dominance
 - **Realistic physics** - Gravity, stiffness, and natural spiral patterns (phyllotaxis)
 - **Leaf distribution** - Automatic leaf placement on thin branches via geometry nodes
+- **Pivot Painter 2.0 export** - Export wind animation data for Unreal Engine 5
 - **Non-destructive** - Adjust parameters and regenerate anytime
 
 ## Requirements
@@ -82,6 +83,25 @@ After generating a tree, click "Add Leaves" in Tree Mesher to configure:
 - **Max Radius** - Only place leaves on thin branches
 - **Scale/Rotation Variation** - Natural randomness
 - **Leaf Object** - Use a custom leaf mesh
+
+### Pivot Painter 2.0 Export (UE5)
+
+
+
+Export hierarchical wind animation data for Unreal Engine 5:
+
+1. Generate a tree using the **Tree Mesher** node
+2. In the Node Editor, add an **Export > Pivot Painter** node
+3. Connect your Tree Mesher output to the Pivot Painter node
+4. Set the export path and click **Export**
+
+This creates two EXR textures and a UV2 layer compatible with Epic's
+`PivotPainter2FoliageShader` material function.
+
+See [UE5 Material Setup Guide](python_classes/pivot_painter/UE5_MATERIAL_SETUP.md)
+for detailed import and material configuration instructions.
+
+> **Note:** Currently only Unreal Engine 5 export is fully tested. I am working towards testing properly in Unity
 
 ## Development
 
