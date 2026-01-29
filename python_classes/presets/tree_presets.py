@@ -33,6 +33,17 @@ class TreePreset:
         return (self.name, self.label, self.description)
 
 
+# Default trunk parameters shared across presets
+_DEFAULT_TRUNK_PARAMS = {
+    "length": 14,
+    "start_radius": 0.3,
+    "end_radius": 0.05,
+    "shape": 0.7,
+    "up_attraction": 0.6,
+    "resolution": 3,
+    "randomness": 1,
+}
+
 # Default branch parameters shared across presets
 _DEFAULT_BRANCH_PARAMS = {
     "start": 0.1,
@@ -55,34 +66,59 @@ TREE_PRESETS: dict[str, TreePreset] = {
         name="OAK",
         label="Oak",
         description="Broad spreading tree with thick trunk",
+        trunk={
+            "length": 7,  # Shorter trunk - oaks branch low
+            "start_radius": 0.5,  # Thicker base
+            "end_radius": 0.15,  # Less taper - branches into major limbs
+            "shape": 0.5,  # More gradual taper
+            "up_attraction": 0.5,  # Straighter trunk
+        },
         branches={
-            "length": 12,
-            "branches_density": 0.8,
-            "start_angle": 60,
-            "gravity_strength": 15,
-            "up_attraction": 0.3,
-            "flatness": 0.3,
-            "stiffness": 0.15,
+            "start": 0.15,  # Branches start slightly up the trunk
+            "length": 8,  # Shorter branches that split more
+            "branches_density": 1.8,  # Many branches to fill crown
+            "start_angle": 55,  # Less horizontal, more room to grow up
+            "gravity_strength": 6,  # Much less droop - branches hold up
+            "up_attraction": 0.45,  # More upward growth for dome shape
+            "flatness": 0.35,  # Slightly less flat
+            "stiffness": 0.2,  # Stiffer branches resist gravity
+            "split_proba": 0.65,  # More splitting for denser crown
         },
     ),
     "PINE": TreePreset(
         name="PINE",
         label="Pine",
-        description="Tall conifer with upward branches",
+        description="Tall conifer with horizontal tiered branches",
+        trunk={
+            "length": 18,  # Tall trunk
+            "start_radius": 0.25,  # Thinner
+            "end_radius": 0.03,  # Sharp taper
+            "shape": 0.9,  # Aggressive taper at top
+            "up_attraction": 0.95,  # Very straight trunk
+        },
         branches={
-            "length": 6,
-            "branches_density": 1.0,
-            "start_angle": 80,
-            "gravity_strength": 2,
-            "up_attraction": 0.8,
-            "flatness": 0.1,
-            "stiffness": 0.3,
+            "start": 0.15,  # Branches start a bit up the trunk
+            "length": 5,  # Shorter, controlled branches
+            "branches_density": 0.8,  # Slightly less dense for distinct tiers
+            "start_angle": 85,  # Nearly horizontal
+            "gravity_strength": 10,  # Moderate droop for natural look
+            "up_attraction": 0.05,  # Very low - branches stay horizontal
+            "flatness": 0.65,  # Branches spread in horizontal plane
+            "stiffness": 0.2,  # Moderate stiffness
+            "split_proba": 0.35,  # Less splitting for cleaner conifer look
         },
     ),
     "WILLOW": TreePreset(
         name="WILLOW",
         label="Willow",
         description="Drooping branches with weeping form",
+        trunk={
+            "length": 10,
+            "start_radius": 0.35,
+            "end_radius": 0.08,
+            "shape": 0.6,
+            "up_attraction": 0.5,
+        },
         branches={
             "length": 15,
             "branches_density": 0.6,
@@ -145,3 +181,22 @@ def apply_preset(branches, preset_name: str) -> None:
     # Apply preset parameters
     for key, value in params.items():
         setattr(branches, key, _wrap_property_value(key, value))
+
+
+def apply_trunk_preset(trunk, preset_name: str) -> None:
+    """Apply a preset's trunk parameters to a TrunkFunction instance.
+
+    Args:
+        trunk: A TrunkFunction instance to configure.
+        preset_name: Key from TREE_PRESETS or 'RANDOM' for default params.
+    """
+    # Apply defaults first
+    for key, value in _DEFAULT_TRUNK_PARAMS.items():
+        setattr(trunk, key, value)
+
+    # Apply preset-specific parameters (RANDOM uses defaults)
+    if preset_name != "RANDOM":
+        preset = TREE_PRESETS.get(preset_name)
+        if preset and preset.trunk:
+            for key, value in preset.trunk.items():
+                setattr(trunk, key, value)
