@@ -168,4 +168,3 @@ class TrunkNode(bpy.types.Node, MtreeFunctionNode):
             socket = self._get_socket_by_property(param_name)
             if socket:
                 socket.property_value = float(param_value)
-
