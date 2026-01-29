@@ -178,3 +178,22 @@ def apply_preset(branches, preset_name: str) -> None:
     # Apply preset parameters
     for key, value in params.items():
         setattr(branches, key, _wrap_property_value(key, value))
+
+
+def apply_trunk_preset(trunk, preset_name: str) -> None:
+    """Apply a preset's trunk parameters to a TrunkFunction instance.
+
+    Args:
+        trunk: A TrunkFunction instance to configure.
+        preset_name: Key from TREE_PRESETS or 'RANDOM' for default params.
+    """
+    # Apply defaults first
+    for key, value in _DEFAULT_TRUNK_PARAMS.items():
+        setattr(trunk, key, value)
+
+    # Apply preset-specific parameters (RANDOM uses defaults)
+    if preset_name != "RANDOM":
+        preset = TREE_PRESETS.get(preset_name)
+        if preset and preset.trunk:
+            for key, value in preset.trunk.items():
+                setattr(trunk, key, value)
