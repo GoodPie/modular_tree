@@ -25,7 +25,7 @@ VECTOR3_ATTRIBUTES = [
 
 
 def create_mesh_from_cpp(
-    mesh: "bpy.types.Mesh",
+    mesh: bpy.types.Mesh,
     cpp_mesh,
 ) -> None:
     """Populate a Blender mesh from C++ mesh data.
@@ -40,7 +40,7 @@ def create_mesh_from_cpp(
     mesh.update(calc_edges=True)
 
 
-def _add_geometry(mesh: "bpy.types.Mesh", cpp_mesh) -> None:
+def _add_geometry(mesh: bpy.types.Mesh, cpp_mesh) -> None:
     """Add vertices and polygons to the mesh."""
     verts = cpp_mesh.get_vertices()
     faces = np.copy(cpp_mesh.get_polygons()[::-1])  # Reverse to flip normals
@@ -59,7 +59,7 @@ def _add_geometry(mesh: "bpy.types.Mesh", cpp_mesh) -> None:
     mesh.polygons.foreach_set("use_smooth", np.ones(len(faces) // 4, dtype=bool))
 
 
-def _add_attributes(mesh: "bpy.types.Mesh", cpp_mesh) -> None:
+def _add_attributes(mesh: bpy.types.Mesh, cpp_mesh) -> None:
     """Add custom attributes to the mesh."""
     for attr_name in FLOAT_ATTRIBUTES:
         data = cpp_mesh.get_float_attribute(attr_name)
@@ -72,7 +72,7 @@ def _add_attributes(mesh: "bpy.types.Mesh", cpp_mesh) -> None:
         mesh.attributes[attr_name].data.foreach_set("vector", data)
 
 
-def _add_uvs(mesh: "bpy.types.Mesh", cpp_mesh) -> None:
+def _add_uvs(mesh: bpy.types.Mesh, cpp_mesh) -> None:
     """Add UV coordinates to the mesh."""
     uv_data = cpp_mesh.get_uvs()
     uv_data.shape = (len(uv_data) // 2, 2)

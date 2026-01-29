@@ -1,3 +1,5 @@
+from .exporter import ExportFormat, ExportResult, PivotPainterExporter
+
 """Pivot Painter 2.0 export module for game engine integration.
 
 This module provides export functionality for Pivot Painter 2.0 data,
@@ -11,7 +13,5 @@ Texture format (Epic's Pivot Painter 2.0 standard):
     - PivotPos_Index.exr: RGB = pivot position, A = hierarchy depth
     - XVector_Extent.exr: RGB = branch direction, A = branch length
 """
-
-from .exporter import PivotPainterExporter, ExportFormat, ExportResult
 
 __all__ = ["PivotPainterExporter", "ExportFormat", "ExportResult"]

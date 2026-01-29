@@ -44,7 +44,7 @@ class PivotPainterExporter:
 
     def __init__(
         self,
-        mesh: "bpy.types.Mesh",
+        mesh: bpy.types.Mesh,
         export_format: ExportFormat,
         texture_size: int = 1024,
         export_path: str = "",
