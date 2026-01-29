@@ -9,6 +9,7 @@ import numpy as np
 if TYPE_CHECKING:
     import bpy
 
+from ..core import compute_stem_id_hash, normalize_with_minimum, pack_unity_vertex_colors
 from ..exporter import ExportResult
 
 
@@ -64,19 +65,12 @@ class UnityExporter:
         self.mesh.attributes["hierarchy_depth"].data.foreach_get("value", hierarchy_depths)
         self.mesh.attributes["branch_extent"].data.foreach_get("value", branch_extents)
 
-        # Normalize values
-        max_depth = max(hierarchy_depths.max(), 1.0)
-        max_extent = max(branch_extents.max(), 1.0)
+        # Normalize values and compute stem ID hashes
+        normalized_depths = normalize_with_minimum(hierarchy_depths)
+        normalized_extents = normalize_with_minimum(branch_extents)
+        stem_id_hashes = compute_stem_id_hash(stem_ids)
 
-        # Pack into RGBA
-        # Use golden ratio hash for stem IDs to avoid wrap-around patterns
-        stem_id_hashes = np.mod(stem_ids * 0.61803398875, 1.0)
-
-        colors = np.zeros(vertex_count * 4)
-        for i in range(vertex_count):
-            colors[i * 4] = hierarchy_depths[i] / max_depth  # R
-            colors[i * 4 + 1] = branch_extents[i] / max_extent  # G
-            colors[i * 4 + 2] = stem_id_hashes[i]  # B
-            colors[i * 4 + 3] = 1.0  # A
+        # Pack into RGBA vertex colors
+        colors = pack_unity_vertex_colors(normalized_depths, normalized_extents, stem_id_hashes)
 
         color_attr.data.foreach_set("color", colors)
