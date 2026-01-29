@@ -140,3 +140,21 @@ class TrunkNode(bpy.types.Node, MtreeFunctionNode):
         """Draw organized parameters in the Properties panel (N key)."""
         self._draw_section(layout, "Basic", "show_basic", BASIC_PARAMS)
         self._draw_section(layout, "Shape", "show_shape", SHAPE_PARAMS)
+
+    def apply_preset(self, preset_name: str):
+        """Apply a preset's trunk parameters by setting socket property values."""
+        from ...presets import _DEFAULT_TRUNK_PARAMS, TREE_PRESETS
+
+        if preset_name == "RANDOM":
+            return  # Trunk doesn't vary randomly
+
+        preset = TREE_PRESETS.get(preset_name)
+        params = {**_DEFAULT_TRUNK_PARAMS}
+        if preset and preset.trunk:
+            params.update(preset.trunk)
+
+        for param_name, param_value in params.items():
+            socket = self._get_socket_by_property(param_name)
+            if socket:
+                socket.property_value = float(param_value)
+
