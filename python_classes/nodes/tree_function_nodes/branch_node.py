@@ -60,6 +60,7 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
             min_value=0,
             property_name="seed",
             property_value=randint(0, 1000),
+            description=PARAM_DESCRIPTIONS["seed"],
         )
         self.add_input(
             "mt_FloatSocket",
@@ -68,6 +69,7 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
             max_value=1,
             property_name="start",
             property_value=0.1,
+            description=PARAM_DESCRIPTIONS["start"],
         )
         self.add_input(
             "mt_FloatSocket",
@@ -76,9 +78,15 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
             max_value=1,
             property_name="end",
             property_value=0.95,
+            description=PARAM_DESCRIPTIONS["end"],
         )
         self.add_input(
-            "mt_PropertySocket", "Length", min_value=0, property_name="length", property_value=9
+            "mt_PropertySocket",
+            "Length",
+            min_value=0,
+            property_name="length",
+            property_value=9,
+            description=PARAM_DESCRIPTIONS["length"],
         )
         self.add_input(
             "mt_FloatSocket",
@@ -86,6 +94,7 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
             min_value=0.0001,
             property_name="branches_density",
             property_value=2,
+            description=PARAM_DESCRIPTIONS["branches_density"],
         )
         self.add_input(
             "mt_PropertySocket",
@@ -94,6 +103,7 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
             max_value=180,
             property_name="start_angle",
             property_value=45,
+            description=PARAM_DESCRIPTIONS["start_angle"],
         )
 
         # Shape parameters
@@ -103,6 +113,7 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
             min_value=0.0001,
             property_name="randomness",
             property_value=0.5,
+            description=PARAM_DESCRIPTIONS["randomness"],
         )
         self.add_input(
             "mt_FloatSocket",
@@ -111,14 +122,29 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
             max_value=1,
             property_name="flatness",
             property_value=0.2,
+            description=PARAM_DESCRIPTIONS["flatness"],
         )
         self.add_input(
-            "mt_FloatSocket", "Up Attraction", property_name="up_attraction", property_value=0.25
+            "mt_FloatSocket",
+            "Up Attraction",
+            property_name="up_attraction",
+            property_value=0.25,
+            description=PARAM_DESCRIPTIONS["up_attraction"],
         )
         self.add_input(
-            "mt_FloatSocket", "Gravity", property_name="gravity_strength", property_value=10
+            "mt_FloatSocket",
+            "Gravity",
+            property_name="gravity_strength",
+            property_value=10,
+            description=PARAM_DESCRIPTIONS["gravity_strength"],
         )
-        self.add_input("mt_FloatSocket", "Stiffness", property_name="stiffness", property_value=0.1)
+        self.add_input(
+            "mt_FloatSocket",
+            "Stiffness",
+            property_name="stiffness",
+            property_value=0.1,
+            description=PARAM_DESCRIPTIONS["stiffness"],
+        )
 
         # Split parameters
         self.add_input(
@@ -128,6 +154,7 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
             max_value=1,
             property_name="split_proba",
             property_value=0.5,
+            description=PARAM_DESCRIPTIONS["split_proba"],
         )
         self.add_input(
             "mt_FloatSocket",
@@ -135,6 +162,7 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
             min_value=0.0001,
             property_name="split_radius",
             property_value=0.8,
+            description=PARAM_DESCRIPTIONS["split_radius"],
         )
         self.add_input(
             "mt_FloatSocket",
@@ -143,6 +171,7 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
             max_value=180,
             property_name="split_angle",
             property_value=35.0,
+            description=PARAM_DESCRIPTIONS["split_angle"],
         )
         self.add_input(
             "mt_FloatSocket",
@@ -151,6 +180,7 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
             max_value=360,
             property_name="phillotaxis",
             property_value=137.5,
+            description=PARAM_DESCRIPTIONS["phillotaxis"],
         )
 
         # Advanced parameters
@@ -160,6 +190,7 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
             min_value=0,
             property_name="break_chance",
             property_value=0.02,
+            description=PARAM_DESCRIPTIONS["break_chance"],
         )
         self.add_input(
             "mt_FloatSocket",
@@ -167,6 +198,7 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
             min_value=0.0001,
             property_name="resolution",
             property_value=3,
+            description=PARAM_DESCRIPTIONS["resolution"],
         )
         self.add_input(
             "mt_PropertySocket",
@@ -174,6 +206,7 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
             min_value=0.0001,
             property_name="start_radius",
             property_value=0.4,
+            description=PARAM_DESCRIPTIONS["start_radius"],
         )
 
         self.add_output("mt_TreeSocket", "Tree", is_property=False)

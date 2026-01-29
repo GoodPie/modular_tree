@@ -44,9 +44,15 @@ class TrunkNode(bpy.types.Node, MtreeFunctionNode):
             min_value=0,
             property_name="seed",
             property_value=randint(0, 1000),
+            description=PARAM_DESCRIPTIONS["seed"],
         )
         self.add_input(
-            "mt_FloatSocket", "Length", min_value=0, property_name="length", property_value=14
+            "mt_FloatSocket",
+            "Length",
+            min_value=0,
+            property_name="length",
+            property_value=14,
+            description=PARAM_DESCRIPTIONS["length"],
         )
         self.add_input(
             "mt_FloatSocket",
@@ -54,6 +60,7 @@ class TrunkNode(bpy.types.Node, MtreeFunctionNode):
             min_value=0.0001,
             property_name="start_radius",
             property_value=0.3,
+            description=PARAM_DESCRIPTIONS["start_radius"],
         )
         self.add_input(
             "mt_FloatSocket",
@@ -61,12 +68,22 @@ class TrunkNode(bpy.types.Node, MtreeFunctionNode):
             min_value=0.0001,
             property_name="end_radius",
             property_value=0.05,
+            description=PARAM_DESCRIPTIONS["end_radius"],
         )
         self.add_input(
-            "mt_FloatSocket", "Shape", min_value=0.0001, property_name="shape", property_value=0.7
+            "mt_FloatSocket",
+            "Shape",
+            min_value=0.0001,
+            property_name="shape",
+            property_value=0.7,
+            description=PARAM_DESCRIPTIONS["shape"],
         )
         self.add_input(
-            "mt_FloatSocket", "Up Attraction", property_name="up_attraction", property_value=0.6
+            "mt_FloatSocket",
+            "Up Attraction",
+            property_name="up_attraction",
+            property_value=0.6,
+            description=PARAM_DESCRIPTIONS["up_attraction"],
         )
         self.add_input(
             "mt_FloatSocket",
@@ -74,8 +91,15 @@ class TrunkNode(bpy.types.Node, MtreeFunctionNode):
             min_value=0.0001,
             property_name="resolution",
             property_value=3,
+            description=PARAM_DESCRIPTIONS["resolution"],
         )
-        self.add_input("mt_FloatSocket", "Randomness", property_name="randomness", property_value=1)
+        self.add_input(
+            "mt_FloatSocket",
+            "Randomness",
+            property_name="randomness",
+            property_value=1,
+            description=PARAM_DESCRIPTIONS["randomness"],
+        )
 
         self.add_output("mt_TreeSocket", "Tree", is_property=False)
 
