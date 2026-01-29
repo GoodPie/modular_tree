@@ -1,3 +1,13 @@
+[project]
+name = "modular-tree"
+version = "5.0.4"
+requires-python = ">=3.11"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
 [tool.ruff]
 target-version = "py311"
 line-length = 100
@@ -14,3 +24,7 @@ ignore = ["E501"]
 
 [tool.ruff.format]
 quote-style = "double"
+
+# NOTE: pytest configuration is in tests/pytest.ini to avoid importing
+# the root __init__.py (Blender addon entry point that imports bpy).
+# Run tests with: cd tests && pytest unit -v

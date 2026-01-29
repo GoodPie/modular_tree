@@ -27,6 +27,24 @@ def sync_manifest_version():
     print(f"Synced manifest version to {version}")
 
 
+def sync_pyproject_version(filepath):
+    """Sync a pyproject.toml version with VERSION file."""
+    version = read_version().replace("_", ".")
+    with open(filepath) as f:
+        content = f.read()
+    content = re.sub(r'^version = "[^"]+"', f'version = "{version}"', content, flags=re.MULTILINE)
+    with open(filepath, "w") as f:
+        f.write(content)
+    print(f"Synced {filepath} version to {version}")
+
+
+def sync_all_versions():
+    """Sync all version files with VERSION."""
+    sync_manifest_version()
+    sync_pyproject_version("pyproject.toml")
+    sync_pyproject_version("m_tree/pyproject.toml")
+
+
 def update_manifest_wheels(manifest_path, wheel_files):
     """Update manifest with wheel paths."""
     with open(manifest_path) as f:
@@ -45,7 +63,7 @@ def update_manifest_wheels(manifest_path, wheel_files):
 
 
 def setup_addon_directory():
-    sync_manifest_version()
+    sync_all_versions()
     version = read_version()
     addon_dirpath = os.path.join(TMP_DIRPATH, f"modular_tree_{version}")
     root = os.path.join(addon_dirpath, "modular_tree")

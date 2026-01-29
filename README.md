@@ -107,6 +107,7 @@ for detailed import and material configuration instructions.
 
 This project uses modern Python tooling:
 
+- **[uv](https://docs.astral.sh/uv/)** - Fast Python package manager (used in CI)
 - **[Ruff](https://docs.astral.sh/ruff/)** - Fast Python linter and formatter
 - **[pre-commit](https://pre-commit.com/)** - Git hooks for code quality
 - **[clang-format](https://clang.llvm.org/docs/ClangFormat.html)** - C++ code formatting
