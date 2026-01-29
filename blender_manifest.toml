@@ -2,7 +2,7 @@ schema_version = "1.0.0"
 
 id = "modular_tree"
 name = "Modular Tree"
-version = "5.1.1"
+version = "5.1.2"
 tagline = "Procedural 3D tree generation"
 maintainer = "GoodPie <brandynbb96@gmail.com>"
 type = "add-on"
