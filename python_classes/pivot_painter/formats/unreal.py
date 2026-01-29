@@ -30,7 +30,7 @@ class UnrealExporter:
 
     def __init__(
         self,
-        mesh: "bpy.types.Mesh",
+        mesh: bpy.types.Mesh,
         object_name: str,
         texture_size: int,
         export_path: str,
@@ -54,16 +54,12 @@ class UnrealExporter:
         files_created = []
 
         # Texture 1: RGB = Pivot Position, A = Hierarchy Depth (parent index proxy)
-        pivot_path = os.path.join(
-            export_dir, f"{self.object_name}_PivotPos_Index.exr"
-        )
+        pivot_path = os.path.join(export_dir, f"{self.object_name}_PivotPos_Index.exr")
         self._create_pivot_index_texture(vertex_data, pivot_path)
         files_created.append(pivot_path)
 
         # Texture 2: RGB = X-Vector (direction), A = X-Extent (branch length)
-        xvector_path = os.path.join(
-            export_dir, f"{self.object_name}_XVector_Extent.exr"
-        )
+        xvector_path = os.path.join(export_dir, f"{self.object_name}_XVector_Extent.exr")
         self._create_xvector_extent_texture(vertex_data, xvector_path)
         files_created.append(xvector_path)
 
@@ -127,15 +123,13 @@ class UnrealExporter:
                 loop_to_vert = np.zeros(num_loops, dtype=int)
                 self.mesh.loops.foreach_get("vertex_index", loop_to_vert)
 
-                # For each vertex, find a loop that references it
+                # Track which vertices have been assigned (first occurrence wins)
+                has_value = np.zeros(num_verts, dtype=bool)
+
                 for loop_idx, vert_idx in enumerate(loop_to_vert):
-                    if is_vector:
-                        # Only set if not already set (first occurrence wins)
-                        if np.all(target[vert_idx] == 0):
-                            target[vert_idx] = loop_data[loop_idx]
-                    else:
-                        if target[vert_idx] == 0:
-                            target[vert_idx] = loop_data[loop_idx]
+                    if not has_value[vert_idx]:
+                        target[vert_idx] = loop_data[loop_idx]
+                        has_value[vert_idx] = True
 
         return {
             "stem_ids": stem_ids,
@@ -237,9 +231,7 @@ class UnrealExporter:
         """
         size = self.texture_size
 
-        image = bpy.data.images.new(
-            name, width=size, height=size, alpha=True, float_buffer=True
-        )
+        image = bpy.data.images.new(name, width=size, height=size, alpha=True, float_buffer=True)
         image.pixels = pixels.tolist()
         image.filepath_raw = filepath
         image.file_format = "OPEN_EXR"
@@ -256,9 +248,7 @@ class UnrealExporter:
             self.mesh.uv_layers.new(name="PivotPainterUV")
 
         uv_layer = (
-            self.mesh.uv_layers[1]
-            if len(self.mesh.uv_layers) > 1
-            else self.mesh.uv_layers[0]
+            self.mesh.uv_layers[1] if len(self.mesh.uv_layers) > 1 else self.mesh.uv_layers[0]
         )
         size = self.texture_size
 

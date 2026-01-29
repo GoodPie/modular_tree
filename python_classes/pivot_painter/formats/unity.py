@@ -21,7 +21,7 @@ class UnityExporter:
 
     VERTEX_COLOR_NAME = "PivotPainterMask"
 
-    def __init__(self, mesh: "bpy.types.Mesh"):
+    def __init__(self, mesh: bpy.types.Mesh):
         self.mesh = mesh
 
     def export(self) -> ExportResult:
@@ -61,9 +61,7 @@ class UnityExporter:
         branch_extents = np.zeros(vertex_count)
 
         self.mesh.attributes["stem_id"].data.foreach_get("value", stem_ids)
-        self.mesh.attributes["hierarchy_depth"].data.foreach_get(
-            "value", hierarchy_depths
-        )
+        self.mesh.attributes["hierarchy_depth"].data.foreach_get("value", hierarchy_depths)
         self.mesh.attributes["branch_extent"].data.foreach_get("value", branch_extents)
 
         # Normalize values
@@ -71,11 +69,14 @@ class UnityExporter:
         max_extent = max(branch_extents.max(), 1.0)
 
         # Pack into RGBA
+        # Use golden ratio hash for stem IDs to avoid wrap-around patterns
+        stem_id_hashes = np.mod(stem_ids * 0.61803398875, 1.0)
+
         colors = np.zeros(vertex_count * 4)
         for i in range(vertex_count):
             colors[i * 4] = hierarchy_depths[i] / max_depth  # R
             colors[i * 4 + 1] = branch_extents[i] / max_extent  # G
-            colors[i * 4 + 2] = (stem_ids[i] % 256) / 255.0  # B
+            colors[i * 4 + 2] = stem_id_hashes[i]  # B
             colors[i * 4 + 3] = 1.0  # A
 
         color_attr.data.foreach_set("color", colors)
