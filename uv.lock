@@ -22,7 +22,7 @@ wheels = [
 
 [[package]]
 name = "modular-tree"
-version = "0.0.0"
+version = "5.0.4"
 source = { virtual = "." }
 
 [package.dev-dependencies]

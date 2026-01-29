@@ -83,10 +83,10 @@ jobs:
           path: wheels
       - name: Install wheel and test dependencies
         run: |
-          uv pip install --system wheels/*.whl
-          uv pip install --system pytest
+          uv pip install wheels/*.whl
+          uv pip install pytest
       - name: Run Python tests
-        run: cd tests && pytest unit -v
+        run: uv run pytest tests/unit -v
 
   package-addon:
     needs: [build-wheels, test-python]

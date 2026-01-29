@@ -87,6 +87,7 @@ After generating a tree, click "Add Leaves" in Tree Mesher to configure:
 
 This project uses modern Python tooling:
 
+- **[uv](https://docs.astral.sh/uv/)** - Fast Python package manager (used in CI)
 - **[Ruff](https://docs.astral.sh/ruff/)** - Fast Python linter and formatter
 - **[pre-commit](https://pre-commit.com/)** - Git hooks for code quality
 - **[clang-format](https://clang.llvm.org/docs/ClangFormat.html)** - C++ code formatting
