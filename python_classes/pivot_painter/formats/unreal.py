@@ -8,12 +8,16 @@ from __future__ import annotations
 import os
 from typing import TYPE_CHECKING
 
-import bpy
 import numpy as np
 
 if TYPE_CHECKING:
-    pass
+    import bpy
 
+from ..core import (
+    create_pivot_index_pixels,
+    create_xvector_extent_pixels,
+    stem_id_to_uv_coords,
+)
 from ..exporter import ExportResult
 
 
@@ -44,6 +48,8 @@ class UnrealExporter:
 
     def export(self) -> ExportResult:
         """Export textures and UV2 for Unreal Engine."""
+        import bpy
+
         export_dir = bpy.path.abspath(self.export_path)
         os.makedirs(export_dir, exist_ok=True)
 
@@ -146,36 +152,12 @@ class UnrealExporter:
         We use hierarchy_depth as a proxy for parent index since it indicates
         how many steps from the root this branch is.
         """
-        size = self.texture_size
-        pixels = np.zeros(size * size * 4)
-
-        stem_ids = vertex_data["stem_ids"]
-        pivot_positions = vertex_data["pivot_positions"]
-        hierarchy_depths = vertex_data["hierarchy_depths"]
-
-        # Map each unique stem_id to a pixel
-        unique_stems = np.unique(stem_ids.astype(int))
-        for stem_id in unique_stems:
-            mask = stem_ids == stem_id
-            if not np.any(mask):
-                continue
-
-            # Get first vertex data for this stem
-            idx = np.where(mask)[0][0]
-            pos = pivot_positions[idx]
-            depth = hierarchy_depths[idx]
-
-            # Map stem_id to pixel coordinates
-            px = int(stem_id) % size
-            py = int(stem_id) // size
-
-            if py < size:
-                pixel_idx = (py * size + px) * 4
-                pixels[pixel_idx] = pos[0]  # R = X position
-                pixels[pixel_idx + 1] = pos[1]  # G = Y position
-                pixels[pixel_idx + 2] = pos[2]  # B = Z position
-                pixels[pixel_idx + 3] = depth  # A = hierarchy depth
-
+        pixels = create_pivot_index_pixels(
+            stem_ids=vertex_data["stem_ids"],
+            pivot_positions=vertex_data["pivot_positions"],
+            hierarchy_depths=vertex_data["hierarchy_depths"],
+            texture_size=self.texture_size,
+        )
         self._save_exr_texture("PivotPos_Index", pixels, filepath)
 
     def _create_xvector_extent_texture(self, vertex_data: dict, filepath: str) -> None:
@@ -184,43 +166,12 @@ class UnrealExporter:
         Epic's format: RGB = normalized branch direction, A = branch length.
         The X-Vector is used to calculate rotation axis: cross(XVector, WindDir).
         """
-        size = self.texture_size
-        pixels = np.zeros(size * size * 4)
-
-        stem_ids = vertex_data["stem_ids"]
-        directions = vertex_data["directions"]
-        extents = vertex_data["branch_extents"]
-
-        unique_stems = np.unique(stem_ids.astype(int))
-        for stem_id in unique_stems:
-            mask = stem_ids == stem_id
-            if not np.any(mask):
-                continue
-
-            idx = np.where(mask)[0][0]
-            direction = directions[idx].copy()
-            extent = extents[idx]
-
-            # Normalize direction vector and clamp to valid range
-            length = np.linalg.norm(direction)
-            if length > 1e-6:
-                direction = direction / length
-                # Clamp to [-1, 1] range as safeguard
-                direction = np.clip(direction, -1.0, 1.0)
-            else:
-                # Default to up vector if direction is zero
-                direction = np.array([0.0, 0.0, 1.0])
-
-            px = int(stem_id) % size
-            py = int(stem_id) // size
-
-            if py < size:
-                pixel_idx = (py * size + px) * 4
-                pixels[pixel_idx] = direction[0]  # R = X direction
-                pixels[pixel_idx + 1] = direction[1]  # G = Y direction
-                pixels[pixel_idx + 2] = direction[2]  # B = Z direction
-                pixels[pixel_idx + 3] = extent  # A = branch extent
-
+        pixels = create_xvector_extent_pixels(
+            stem_ids=vertex_data["stem_ids"],
+            directions=vertex_data["directions"],
+            branch_extents=vertex_data["branch_extents"],
+            texture_size=self.texture_size,
+        )
         self._save_exr_texture("XVector_Extent", pixels, filepath)
 
     def _save_exr_texture(self, name: str, pixels: np.ndarray, filepath: str) -> None:
@@ -229,6 +180,8 @@ class UnrealExporter:
         EXR format preserves full float precision needed for world-space positions
         and normalized vectors.
         """
+        import bpy
+
         size = self.texture_size
 
         image = bpy.data.images.new(name, width=size, height=size, alpha=True, float_buffer=True)
@@ -250,14 +203,11 @@ class UnrealExporter:
         uv_layer = (
             self.mesh.uv_layers[1] if len(self.mesh.uv_layers) > 1 else self.mesh.uv_layers[0]
         )
-        size = self.texture_size
 
         # Set UV coordinates based on stem_id
         for poly in self.mesh.polygons:
             for loop_idx in poly.loop_indices:
                 vert_idx = self.mesh.loops[loop_idx].vertex_index
                 stem_id = int(stem_ids[vert_idx])
-                # Map stem_id to UV coordinates (center of pixel)
-                u = (stem_id % size + 0.5) / size
-                v = (stem_id // size + 0.5) / size
-                uv_layer.data[loop_idx].uv = (u, v)
+                uv = stem_id_to_uv_coords(stem_id, self.texture_size)
+                uv_layer.data[loop_idx].uv = uv
