@@ -83,6 +83,7 @@ jobs:
           path: wheels
       - name: Install wheel and test dependencies
         run: |
+          uv venv
           uv pip install wheels/*.whl
           uv pip install pytest
       - name: Run Python tests
