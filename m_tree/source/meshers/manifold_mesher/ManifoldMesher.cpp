@@ -24,13 +24,35 @@ struct IndexRange
 	int max_index;
 };
 
+// Context for Pivot Painter 2.0 attributes
+struct PivotPainterContext
+{
+	int stem_id;
+	int hierarchy_depth;
+	Vector3 pivot_position;
+	float branch_extent;
+};
+
+// Calculate total extent (length) of a branch recursively
+float calculate_branch_extent(const Node& node)
+{
+	float extent = node.length;
+	if (!node.is_leaf() && node.children.size() > 0)
+	{
+		// Follow the main continuation (first child)
+		extent += calculate_branch_extent(node.children[0]->node);
+	}
+	return extent;
+}
+
 float get_smooth_amount(const float radius, const float node_length)
 {
 	return std::min(1.f, radius / node_length);
 }
 
 CircleDesignator add_circle(const Vector3& node_position, const Node& node, float factor,
-                            const int radial_n_points, Mesh& mesh, const float uv_y)
+                            const int radial_n_points, Mesh& mesh, const float uv_y,
+                            const PivotPainterContext& pp_ctx)
 {
 	const Vector3& right = node.tangent;
 	int vertex_index = mesh.vertices.size();
@@ -47,6 +69,16 @@ CircleDesignator add_circle(const Vector3& node_position, const Node& node, floa
 	float smooth_amount = get_smooth_amount(radius, node.length);
 	auto& direction_attr =
 	    *static_cast<Attribute<Vector3>*>(mesh.attributes[AttributeNames::direction].get());
+	// Pivot Painter attributes
+	auto& stem_id_attr =
+	    *static_cast<Attribute<float>*>(mesh.attributes[AttributeNames::stem_id].get());
+	auto& hierarchy_depth_attr =
+	    *static_cast<Attribute<float>*>(mesh.attributes[AttributeNames::hierarchy_depth].get());
+	auto& pivot_position_attr =
+	    *static_cast<Attribute<Vector3>*>(mesh.attributes[AttributeNames::pivot_position].get());
+	auto& branch_extent_attr =
+	    *static_cast<Attribute<float>*>(mesh.attributes[AttributeNames::branch_extent].get());
+
 	for (size_t i = 0; i < radial_n_points; i++)
 	{
 		float angle = (float)i / radial_n_points * 2 * M_PI;
@@ -56,6 +88,11 @@ CircleDesignator add_circle(const Vector3& node_position, const Node& node, floa
 		smooth_attr.data[index] = smooth_amount;
 		radius_attr.data[index] = radius;
 		direction_attr.data[index] = node.direction;
+		// Set Pivot Painter attributes
+		stem_id_attr.data[index] = (float)pp_ctx.stem_id;
+		hierarchy_depth_attr.data[index] = (float)pp_ctx.hierarchy_depth;
+		pivot_position_attr.data[index] = pp_ctx.pivot_position;
+		branch_extent_attr.data[index] = pp_ctx.branch_extent;
 		mesh.uvs.emplace_back((float)i / radial_n_points, uv_y);
 	}
 	mesh.uvs.emplace_back(1, uv_y);
@@ -165,7 +202,7 @@ std::vector<int> get_child_index_order(const CircleDesignator& parent_base,
 void add_child_base_geometry(const std::vector<int>& child_base_indices,
                              const CircleDesignator& child_base, const float child_radius,
                              const Vector3& child_pos, const int offset, const float smooth_amount,
-                             Mesh& mesh)
+                             Mesh& mesh, const PivotPainterContext& pp_ctx)
 {
 	auto& smooth_attr = *static_cast<Attribute<float>*>(
 	    mesh.attributes[ManifoldMesher::AttributeNames::smooth_amount].get());
@@ -173,6 +210,15 @@ void add_child_base_geometry(const std::vector<int>& child_base_indices,
 	    mesh.attributes[ManifoldMesher::AttributeNames::radius].get());
 	auto& direction_attr = *static_cast<Attribute<Vector3>*>(
 	    mesh.attributes[ManifoldMesher::AttributeNames::direction].get());
+	// Pivot Painter attributes
+	auto& stem_id_attr = *static_cast<Attribute<float>*>(
+	    mesh.attributes[ManifoldMesher::AttributeNames::stem_id].get());
+	auto& hierarchy_depth_attr = *static_cast<Attribute<float>*>(
+	    mesh.attributes[ManifoldMesher::AttributeNames::hierarchy_depth].get());
+	auto& pivot_position_attr = *static_cast<Attribute<Vector3>*>(
+	    mesh.attributes[ManifoldMesher::AttributeNames::pivot_position].get());
+	auto& branch_extent_attr = *static_cast<Attribute<float>*>(
+	    mesh.attributes[ManifoldMesher::AttributeNames::branch_extent].get());
 
 	Vector3 direction =
 	    (mesh.vertices[child_base_indices[2]] - mesh.vertices[child_base_indices[0]])
@@ -193,6 +239,11 @@ void add_child_base_geometry(const std::vector<int>& child_base_indices,
 		smooth_attr.data[added_vertex_index] = smooth_amount;
 		radius_attr.data[added_vertex_index] = child_radius;
 		direction_attr.data[added_vertex_index] = direction;
+		// Set Pivot Painter attributes
+		stem_id_attr.data[added_vertex_index] = (float)pp_ctx.stem_id;
+		hierarchy_depth_attr.data[added_vertex_index] = (float)pp_ctx.hierarchy_depth;
+		pivot_position_attr.data[added_vertex_index] = pp_ctx.pivot_position;
+		branch_extent_attr.data[added_vertex_index] = pp_ctx.branch_extent;
 
 		int polygon_index = mesh.add_polygon();
 		mesh.polygons[polygon_index] = {
@@ -259,7 +310,7 @@ int add_child_base_uvs(float parent_uv_y, const Node& parent, const NodeChild& c
 CircleDesignator add_child_circle(const Node& parent, const NodeChild& child,
                                   const Vector3& child_pos, const Vector3& parent_pos,
                                   const CircleDesignator& parent_base, const IndexRange child_range,
-                                  const float uv_y, Mesh& mesh)
+                                  const float uv_y, Mesh& mesh, const PivotPainterContext& pp_ctx)
 {
 	float smooth_amount = get_smooth_amount(child.node.radius, parent.length);
 
@@ -279,7 +330,7 @@ CircleDesignator add_child_circle(const Node& parent, const NodeChild& child,
 	child_base.uv_index = add_child_base_uvs(uv_y, parent, child, child_range, child_radial_n,
 	                                         parent_base.radial_n, mesh);
 	add_child_base_geometry(child_base_indices, child_base, child.node.radius, child_pos, offset,
-	                        smooth_amount, mesh);
+	                        smooth_amount, mesh, pp_ctx);
 	return child_base;
 }
 
@@ -302,28 +353,30 @@ bool has_side_branches(const Node& node)
 		if (node.children[i]->node.children.size() > 0)
 			return true;
 	}
+	return false;
 }
 
 void mesh_node_rec(const Node& node, const Vector3& node_position, const CircleDesignator& base,
-                   Mesh& mesh, const float uv_y)
+                   Mesh& mesh, const float uv_y, const PivotPainterContext& pp_ctx, int& stem_id_counter)
 {
 	if (node.children.size() < 2)
 	{
 		float uv_growth = node.length / (node.radius + .001f) / (2 * M_PI);
 		auto child_circle =
-		    add_circle(node_position, node, 1, base.radial_n, mesh, uv_y + uv_growth);
+		    add_circle(node_position, node, 1, base.radial_n, mesh, uv_y + uv_growth, pp_ctx);
 		bridge_circles(base, child_circle, base.radial_n, mesh);
 		Vector3 child_pos = NodeUtilities::get_position_in_node(node_position, node, 1);
 
 		if (!node.is_leaf())
 		{
-			mesh_node_rec(node.children[0]->node, child_pos, child_circle, mesh, uv_y + uv_growth);
+			mesh_node_rec(node.children[0]->node, child_pos, child_circle, mesh, uv_y + uv_growth,
+			              pp_ctx, stem_id_counter);
 		}
 	}
 	else
 	{
 		float uv_growth = node.length / (node.radius + .001f) / (2 * M_PI);
-		auto end_circle = add_circle(node_position, node, 1, base.radial_n, mesh, uv_y + uv_growth);
+		auto end_circle = add_circle(node_position, node, 1, base.radial_n, mesh, uv_y + uv_growth, pp_ctx);
 		std::vector<IndexRange> children_ranges = get_children_ranges(node, base.radial_n);
 		bridge_circles(base, end_circle, base.radial_n, mesh, &children_ranges);
 		for (int i = 0; i < node.children.size(); i++)
@@ -334,7 +387,7 @@ void mesh_node_rec(const Node& node, const Vector3& node_position, const CircleD
 				if (node.children.size() > 0)
 				{
 					mesh_node_rec(node.children[0]->node, child_pos, end_circle, mesh,
-					              uv_y + uv_growth);
+					              uv_y + uv_growth, pp_ctx, stem_id_counter);
 				}
 			}
 			else
@@ -342,10 +395,17 @@ void mesh_node_rec(const Node& node, const Vector3& node_position, const CircleD
 				auto& child = *node.children[i];
 				Vector3 child_pos = get_side_child_position(node, child, node_position);
 
+				// Create new context for side branch with incremented stem_id and depth
+				PivotPainterContext child_pp_ctx;
+				child_pp_ctx.stem_id = ++stem_id_counter;
+				child_pp_ctx.hierarchy_depth = pp_ctx.hierarchy_depth + 1;
+				child_pp_ctx.pivot_position = child_pos;
+				child_pp_ctx.branch_extent = calculate_branch_extent(child.node);
+
 				auto child_base = add_child_circle(node, child, child_pos, node_position, base,
-				                                   children_ranges[i - 1], uv_y, mesh);
+				                                   children_ranges[i - 1], uv_y, mesh, child_pp_ctx);
 				mesh_node_rec(node.children[i]->node, child_pos, child_base, mesh,
-				              uv_y + uv_growth);
+				              uv_y + uv_growth, child_pp_ctx, stem_id_counter);
 			}
 		}
 	}
@@ -361,16 +421,31 @@ Mesh ManifoldMesher::mesh_tree(Tree& tree)
 	auto& smooth_attr = mesh.add_attribute<float>(AttributeNames::smooth_amount);
 	auto& radius_attr = mesh.add_attribute<float>(AttributeNames::radius);
 	auto& direction_attr = mesh.add_attribute<Vector3>(AttributeNames::direction);
+	// Pivot Painter 2.0 attributes
+	auto& stem_id_attr = mesh.add_attribute<float>(AttributeNames::stem_id);
+	auto& hierarchy_depth_attr = mesh.add_attribute<float>(AttributeNames::hierarchy_depth);
+	auto& pivot_position_attr = mesh.add_attribute<Vector3>(AttributeNames::pivot_position);
+	auto& branch_extent_attr = mesh.add_attribute<float>(AttributeNames::branch_extent);
+
+	int stem_id_counter = 0;
 	for (auto& stem : tree.get_stems())
 	{
 		//__debugbreak();
 
 		if (stem.node.children.size() == 0)
 			continue;
+
+		// Initialize Pivot Painter context for this stem
+		PivotPainterContext pp_ctx;
+		pp_ctx.stem_id = stem_id_counter++;
+		pp_ctx.hierarchy_depth = 0;
+		pp_ctx.pivot_position = stem.position;
+		pp_ctx.branch_extent = calculate_branch_extent(stem.node);
+
 		CircleDesignator start_circle{(int)mesh.vertices.size(), (int)mesh.uvs.size(),
 		                              radial_resolution};
-		add_circle(stem.position, stem.node, 0, radial_resolution, mesh, 0);
-		mesh_node_rec(stem.node, stem.position, start_circle, mesh, 0);
+		add_circle(stem.position, stem.node, 0, radial_resolution, mesh, 0, pp_ctx);
+		mesh_node_rec(stem.node, stem.position, start_circle, mesh, 0, pp_ctx, stem_id_counter);
 	}
 	if (smooth_iterations > 0)
 		MeshProcessing::Smoothing::smooth_mesh(mesh, smooth_iterations, 1, &smooth_attr.data);

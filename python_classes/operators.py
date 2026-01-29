@@ -1,18 +1,23 @@
+"""Blender operators for MTree addon."""
+
 from __future__ import annotations
 
 import time
 from random import randint
 
 import bpy
-import numpy as np
 from bpy.utils import register_class, unregister_class
 
 from .m_tree_wrapper import lazy_m_tree as m_tree
+from .mesh_utils import create_mesh_from_cpp
+from .pivot_painter import ExportFormat, PivotPainterExporter
 from .presets import apply_preset, get_preset_items
 from .resources.node_groups import distribute_leaves
 
 
 class ExecuteNodeFunction(bpy.types.Operator):
+    """Execute a function on a node by name."""
+
     bl_idname = "mtree.node_function"
     bl_label = "Node Function callback"
     bl_options = {"REGISTER", "UNDO"}
@@ -28,6 +33,8 @@ class ExecuteNodeFunction(bpy.types.Operator):
 
 
 class AddLeavesModifier(bpy.types.Operator):
+    """Add leaves distribution modifier to tree."""
+
     bl_idname = "mtree.add_leaves"
     bl_label = "Add leaves distribution modifier to tree"
     bl_options = {"REGISTER", "UNDO"}
@@ -42,7 +49,7 @@ class AddLeavesModifier(bpy.types.Operator):
 
 
 class QuickGenerateTree(bpy.types.Operator):
-    """Generate a random tree with preset settings"""
+    """Generate a random tree with preset settings."""
 
     bl_idname = "mtree.quick_generate"
     bl_label = "Generate Random Tree"
@@ -61,39 +68,11 @@ class QuickGenerateTree(bpy.types.Operator):
             seed = self.seed if self.seed != 0 else randint(0, 10000)
             start_time = time.time()
 
-            # Create tree using C++ API
-            tree = m_tree.Tree()
+            cpp_mesh = self._generate_tree(seed)
+            self._create_blender_object(context, cpp_mesh, f"Tree_{seed}")
 
-            # Configure trunk
-            trunk = m_tree.TrunkFunction()
-            trunk.seed = seed
-            trunk.length = 14
-            trunk.start_radius = 0.3
-            trunk.end_radius = 0.05
-            trunk.resolution = 3
-
-            # Configure branches using preset
-            branches = m_tree.BranchFunction()
-            branches.seed = seed + 1
-            apply_preset(branches, self.preset)
-
-            trunk.add_child(branches)
-            tree.set_trunk_function(trunk)
-            tree.execute_functions()
-
-            # Mesh the tree
-            mesher = m_tree.ManifoldMesher()
-            mesher.radial_n_points = 32
-            mesher.smooth_iterations = 4
-            mesh_data = mesher.mesh_tree(tree)
-
-            # Create Blender object
-            self._create_blender_object(context, mesh_data, f"Tree_{seed}")
-
-            # Add leaves if enabled
             if self.add_leaves:
-                obj = context.view_layer.objects.active
-                distribute_leaves(obj)
+                distribute_leaves(context.view_layer.objects.active)
 
             elapsed = time.time() - start_time
             self.report({"INFO"}, f"Generated tree (seed={seed}) in {elapsed:.2f}s")
@@ -103,6 +82,30 @@ class QuickGenerateTree(bpy.types.Operator):
             self.report({"ERROR"}, f"Failed to generate tree: {str(e)}")
             return {"CANCELLED"}
 
+    def _generate_tree(self, seed: int):
+        """Generate tree using C++ library."""
+        tree = m_tree.Tree()
+
+        trunk = m_tree.TrunkFunction()
+        trunk.seed = seed
+        trunk.length = 14
+        trunk.start_radius = 0.3
+        trunk.end_radius = 0.05
+        trunk.resolution = 3
+
+        branches = m_tree.BranchFunction()
+        branches.seed = seed + 1
+        apply_preset(branches, self.preset)
+
+        trunk.add_child(branches)
+        tree.set_trunk_function(trunk)
+        tree.execute_functions()
+
+        mesher = m_tree.ManifoldMesher()
+        mesher.radial_n_points = 32
+        mesher.smooth_iterations = 4
+        return mesher.mesh_tree(tree)
+
     def _create_blender_object(self, context, cpp_mesh, name: str) -> None:
         """Create Blender mesh object from C++ mesh data."""
         mesh = bpy.data.meshes.new(name)
@@ -111,38 +114,7 @@ class QuickGenerateTree(bpy.types.Operator):
         context.view_layer.objects.active = obj
         obj.select_set(True)
 
-        # Copy mesh data
-        verts = cpp_mesh.get_vertices()
-        faces = np.copy(cpp_mesh.get_polygons()[::-1])
-        radii = cpp_mesh.get_float_attribute("radius")
-        directions = cpp_mesh.get_vector3_attribute("direction")
-
-        mesh.vertices.add(len(verts) // 3)
-        mesh.vertices.foreach_set("co", verts)
-        mesh.attributes.new(name="radius", type="FLOAT", domain="POINT")
-        mesh.attributes["radius"].data.foreach_set("value", radii)
-        mesh.attributes.new(name="direction", type="FLOAT_VECTOR", domain="POINT")
-        mesh.attributes["direction"].data.foreach_set("vector", directions)
-
-        mesh.loops.add(len(faces))
-        mesh.loops.foreach_set("vertex_index", faces)
-
-        loop_start = np.arange(0, len(faces), 4, dtype=np.int32)
-        loop_total = np.ones(len(faces) // 4, dtype=np.int32) * 4
-        mesh.polygons.add(len(faces) // 4)
-        mesh.polygons.foreach_set("loop_start", loop_start)
-        mesh.polygons.foreach_set("loop_total", loop_total)
-        mesh.polygons.foreach_set("use_smooth", np.ones(len(faces) // 4, dtype=bool))
-
-        # UVs
-        uv_data = cpp_mesh.get_uvs()
-        uv_data.shape = (len(uv_data) // 2, 2)
-        uv_loops = np.copy(cpp_mesh.get_uv_loops()[::-1])
-        uvs = uv_data[uv_loops].flatten()
-        uv_layer = mesh.uv_layers.new() if len(mesh.uv_layers) == 0 else mesh.uv_layers[0]
-        uv_layer.data.foreach_set("uv", uvs)
-
-        mesh.update(calc_edges=True)
+        create_mesh_from_cpp(mesh, cpp_mesh)
 
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self)
@@ -154,8 +126,68 @@ class QuickGenerateTree(bpy.types.Operator):
         layout.prop(self, "add_leaves")
 
 
+class ExportPivotPainter(bpy.types.Operator):
+    """Export Pivot Painter 2.0 data for game engines."""
+
+    bl_idname = "mtree.export_pivot_painter"
+    bl_label = "Export Pivot Painter"
+    bl_options = {"REGISTER", "UNDO"}
+
+    object_name: bpy.props.StringProperty(name="Object")
+    export_format: bpy.props.EnumProperty(
+        name="Format",
+        items=[
+            ("UE5", "Unreal Engine 5", "Export for UE5 with Nanite support"),
+            ("UE4", "Unreal Engine 4", "Export for UE4 Pivot Painter 2.0"),
+            ("UNITY", "Unity", "Export vertex colors for Unity"),
+        ],
+        default="UE5",
+    )
+    texture_size: bpy.props.IntProperty(name="Texture Size", default=1024, min=64, max=4096)
+    export_path: bpy.props.StringProperty(
+        name="Export Path",
+        subtype="DIR_PATH",
+        default="//pivot_painter/",
+    )
+
+    def execute(self, context):
+        obj = bpy.data.objects.get(self.object_name)
+        if obj is None or obj.type != "MESH":
+            self.report({"ERROR"}, "Invalid mesh object")
+            return {"CANCELLED"}
+
+        exporter = PivotPainterExporter(
+            mesh=obj.data,
+            export_format=ExportFormat[self.export_format],
+            texture_size=self.texture_size,
+            export_path=self.export_path,
+        )
+
+        result = exporter.export(obj.name)
+
+        if result.success:
+            self.report({"INFO"}, result.message)
+            return {"FINISHED"}
+        else:
+            self.report({"ERROR"}, result.message)
+            return {"CANCELLED"}
+
+    def invoke(self, context, event):
+        if context.active_object and context.active_object.type == "MESH":
+            self.object_name = context.active_object.name
+        return context.window_manager.invoke_props_dialog(self)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.prop(self, "object_name")
+        layout.prop(self, "export_format")
+        if self.export_format != "UNITY":
+            layout.prop(self, "texture_size")
+            layout.prop(self, "export_path")
+
+
 class ApplyBranchNodePreset(bpy.types.Operator):
-    """Apply a preset to a branch node"""
+    """Apply a preset to a branch node."""
 
     bl_idname = "mtree.apply_branch_node_preset"
     bl_label = "Apply Preset"
@@ -175,15 +207,22 @@ class ApplyBranchNodePreset(bpy.types.Operator):
         return {"FINISHED"}
 
 
+# Registration
+
+_classes = [
+    ExecuteNodeFunction,
+    AddLeavesModifier,
+    QuickGenerateTree,
+    ExportPivotPainter,
+    ApplyBranchNodePreset,
+]
+
+
 def register():
-    register_class(ExecuteNodeFunction)
-    register_class(AddLeavesModifier)
-    register_class(QuickGenerateTree)
-    register_class(ApplyBranchNodePreset)
+    for cls in _classes:
+        register_class(cls)
 
 
 def unregister():
-    unregister_class(ExecuteNodeFunction)
-    unregister_class(AddLeavesModifier)
-    unregister_class(QuickGenerateTree)
-    unregister_class(ApplyBranchNodePreset)
+    for cls in _classes:
+        unregister_class(cls)
