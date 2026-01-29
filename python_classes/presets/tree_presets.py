@@ -33,6 +33,17 @@ class TreePreset:
         return (self.name, self.label, self.description)
 
 
+# Default trunk parameters shared across presets
+_DEFAULT_TRUNK_PARAMS = {
+    "length": 14,
+    "start_radius": 0.3,
+    "end_radius": 0.05,
+    "shape": 0.7,
+    "up_attraction": 0.6,
+    "resolution": 3,
+    "randomness": 1,
+}
+
 # Default branch parameters shared across presets
 _DEFAULT_BRANCH_PARAMS = {
     "start": 0.1,
@@ -55,20 +66,35 @@ TREE_PRESETS: dict[str, TreePreset] = {
         name="OAK",
         label="Oak",
         description="Broad spreading tree with thick trunk",
+        trunk={
+            "length": 7,  # Shorter trunk - oaks branch low
+            "start_radius": 0.5,  # Thicker base
+            "end_radius": 0.15,  # Less taper - branches into major limbs
+            "shape": 0.5,  # More gradual taper
+            "up_attraction": 0.4,  # Slight lean is natural for oaks
+        },
         branches={
-            "length": 12,
-            "branches_density": 0.8,
-            "start_angle": 60,
-            "gravity_strength": 15,
-            "up_attraction": 0.3,
-            "flatness": 0.3,
-            "stiffness": 0.15,
+            "start": 0.0,  # Branches start at trunk base
+            "length": 10,  # Slightly shorter branches
+            "branches_density": 0.6,  # Fewer but larger branches
+            "start_angle": 70,  # Wider spread
+            "gravity_strength": 18,  # More droop
+            "up_attraction": 0.2,  # Less upward pull
+            "flatness": 0.4,  # More horizontal spread
+            "stiffness": 0.12,
         },
     ),
     "PINE": TreePreset(
         name="PINE",
         label="Pine",
         description="Tall conifer with upward branches",
+        trunk={
+            "length": 18,  # Tall trunk
+            "start_radius": 0.25,  # Thinner
+            "end_radius": 0.03,  # Sharp taper
+            "shape": 0.9,  # Aggressive taper at top
+            "up_attraction": 0.8,  # Very straight
+        },
         branches={
             "length": 6,
             "branches_density": 1.0,
@@ -83,6 +109,13 @@ TREE_PRESETS: dict[str, TreePreset] = {
         name="WILLOW",
         label="Willow",
         description="Drooping branches with weeping form",
+        trunk={
+            "length": 10,
+            "start_radius": 0.35,
+            "end_radius": 0.08,
+            "shape": 0.6,
+            "up_attraction": 0.5,
+        },
         branches={
             "length": 15,
             "branches_density": 0.6,
