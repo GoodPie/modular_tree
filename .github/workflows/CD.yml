@@ -71,8 +71,25 @@ jobs:
           name: wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
 
-  package-addon:
+  test-python:
     needs: build-wheels
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheels-ubuntu-latest
+          path: wheels
+      - name: Install wheel and test dependencies
+        run: |
+          uv pip install --system wheels/*.whl
+          uv pip install --system pytest
+      - name: Run Python tests
+        run: cd tests && pytest unit -v
+
+  package-addon:
+    needs: [build-wheels, test-python]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
