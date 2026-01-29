@@ -24,3 +24,7 @@ ignore = ["E501"]
 
 [tool.ruff.format]
 quote-style = "double"
+
+# NOTE: pytest configuration is in tests/pytest.ini to avoid importing
+# the root __init__.py (Blender addon entry point that imports bpy).
+# Run tests with: cd tests && pytest unit -v
