@@ -138,6 +138,17 @@ class TrunkNode(bpy.types.Node, MtreeFunctionNode):
 
     def draw_inspector(self, context, layout):
         """Draw organized parameters in the Properties panel (N key)."""
+        # Preset buttons
+        box = layout.box()
+        box.label(text="Presets", icon="PRESET")
+        row = box.row(align=True)
+        for preset_name in ["OAK", "PINE", "WILLOW"]:
+            op = row.operator("mtree.apply_trunk_node_preset", text=preset_name.capitalize())
+            op.preset = preset_name
+            op.node_tree_name = self.id_data.name
+            op.node_name = self.name
+
+        # Parameter sections
         self._draw_section(layout, "Basic", "show_basic", BASIC_PARAMS)
         self._draw_section(layout, "Shape", "show_shape", SHAPE_PARAMS)
 
