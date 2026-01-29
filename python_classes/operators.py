@@ -11,7 +11,7 @@ from bpy.utils import register_class, unregister_class
 from .m_tree_wrapper import lazy_m_tree as m_tree
 from .mesh_utils import create_mesh_from_cpp
 from .pivot_painter import ExportFormat, PivotPainterExporter
-from .presets import apply_preset, get_preset_items
+from .presets import apply_preset, apply_trunk_preset, get_preset_items
 from .resources.node_groups import distribute_leaves
 
 
@@ -88,10 +88,7 @@ class QuickGenerateTree(bpy.types.Operator):
 
         trunk = m_tree.TrunkFunction()
         trunk.seed = seed
-        trunk.length = 14
-        trunk.start_radius = 0.3
-        trunk.end_radius = 0.05
-        trunk.resolution = 3
+        apply_trunk_preset(trunk, self.preset)
 
         branches = m_tree.BranchFunction()
         branches.seed = seed + 1
