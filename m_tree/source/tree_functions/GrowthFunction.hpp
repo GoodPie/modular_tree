@@ -33,6 +33,7 @@ class GrowthFunction : public TreeFunction
 	float branch_angle = 60;
 	float philotaxis_angle = 2.399f;
 	float flower_threshold = .5f;
+	bool enable_flowering = false;
 
 	float growth_delta = .1f;
 	float flowering_delta = .1f;
@@ -63,7 +64,8 @@ class BioNodeInfo : public GrowthInfo
 		Branch,
 		Cut,
 		Ignored,
-		Dormant
+		Dormant,
+		Flower
 	} type;
 	float branch_weight = 0;
 	Vector3 center_of_mass;
