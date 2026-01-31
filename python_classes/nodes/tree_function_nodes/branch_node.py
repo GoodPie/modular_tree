@@ -79,9 +79,50 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
     def draw(self, context, layout):
         layout.prop(self, "crown_shape", text="Crown")
 
+    # Mapping from socket property_name to nested struct path
+    NESTED_PROPERTY_MAP = {
+        # Distribution params
+        "start": ("distribution", "start"),
+        "end": ("distribution", "end"),
+        "branches_density": ("distribution", "density"),
+        "phillotaxis": ("distribution", "phillotaxis"),
+        # Gravity params
+        "gravity_strength": ("gravity", "strength"),
+        "stiffness": ("gravity", "stiffness"),
+        "up_attraction": ("gravity", "up_attraction"),
+        # Split params
+        "split_proba": ("split", "probability"),
+        "split_radius": ("split", "radius"),
+        "split_angle": ("split", "angle"),
+    }
+
     def construct_function(self):
-        func = super().construct_function()
-        # Map Blender enum to C++ enum
+        func = self.tree_function()
+
+        # Handle exposed_parameters (from base class pattern)
+        for parameter in self.exposed_parameters:
+            setattr(func, parameter, getattr(self, parameter))
+
+        # Handle input sockets with nested property mapping
+        for input_socket in self.inputs:
+            if not input_socket.is_property:
+                continue
+
+            prop_name = input_socket.property_name
+            if input_socket.bl_idname == "mt_PropertySocket":
+                value = input_socket.get_property()
+            else:
+                value = input_socket.property_value
+
+            # Check if this is a nested property
+            if prop_name in self.NESTED_PROPERTY_MAP:
+                struct_name, field_name = self.NESTED_PROPERTY_MAP[prop_name]
+                struct = getattr(func, struct_name)
+                setattr(struct, field_name, value)
+            else:
+                setattr(func, prop_name, value)
+
+        # Map Blender enum to C++ enum for crown shape
         shape_map = {
             "CYLINDRICAL": lazy_m_tree.CrownShape.Cylindrical,
             "CONICAL": lazy_m_tree.CrownShape.Conical,
@@ -94,6 +135,15 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
         }
         func.crown.shape = shape_map.get(self.crown_shape, lazy_m_tree.CrownShape.Cylindrical)
         func.crown.angle_variation = self.angle_variation
+
+        # Handle child nodes
+        for child in self.get_child_nodes():
+            from ..base_types.node import MtreeFunctionNode
+
+            if isinstance(child, MtreeFunctionNode):
+                child_function = child.construct_function()
+                func.add_child(child_function)
+
         return func
 
     def init(self, context):
