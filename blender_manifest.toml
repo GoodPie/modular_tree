@@ -11,4 +11,7 @@ blender_version_min = "5.0.0"
 license = ["SPDX:GPL-3.0-or-later"]
 tags = ["3D View", "Mesh", "Add Curve"]
 
-wheels = []
+platforms = ["windows-x64", "macos-x64", "macos-arm64", "linux-x64"]
+
+[permissions]
+files = "Export pivot painter textures"
