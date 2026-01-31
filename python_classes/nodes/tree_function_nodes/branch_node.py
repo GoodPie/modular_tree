@@ -5,6 +5,8 @@ from random import randint
 import bpy
 
 from ...m_tree_wrapper import lazy_m_tree
+from ...viewport.shape_formulas import BLENDER_SHAPE_MAP
+from ...viewport.shape_formulas import CrownShape as PyCrownShape
 from ..base_types.node import MtreeFunctionNode
 
 # Parameter groupings for organized UI
@@ -129,17 +131,9 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
                 setattr(func, prop_name, value)
 
         # Map Blender enum to C++ enum for crown shape
-        shape_map = {
-            "CYLINDRICAL": lazy_m_tree.CrownShape.Cylindrical,
-            "CONICAL": lazy_m_tree.CrownShape.Conical,
-            "SPHERICAL": lazy_m_tree.CrownShape.Spherical,
-            "HEMISPHERICAL": lazy_m_tree.CrownShape.Hemispherical,
-            "TAPERED_CYLINDRICAL": lazy_m_tree.CrownShape.TaperedCylindrical,
-            "FLAME": lazy_m_tree.CrownShape.Flame,
-            "INVERSE_CONICAL": lazy_m_tree.CrownShape.InverseConical,
-            "TEND_FLAME": lazy_m_tree.CrownShape.TendFlame,
-        }
-        func.crown.shape = shape_map.get(self.crown_shape, lazy_m_tree.CrownShape.Cylindrical)
+        # Uses shared BLENDER_SHAPE_MAP and converts via int (both enums share same values)
+        py_shape = BLENDER_SHAPE_MAP.get(self.crown_shape, PyCrownShape.Cylindrical)
+        func.crown.shape = lazy_m_tree.CrownShape(int(py_shape))
         func.crown.angle_variation = self.angle_variation
 
         # Handle child nodes
