@@ -34,6 +34,13 @@ PYBIND11_MODULE(m_tree, m) {
         .value("InverseConical", CrownShape::InverseConical)
         .value("TendFlame", CrownShape::TendFlame);
 
+    py::class_<CrownParams, std::shared_ptr<CrownParams>>(m, "CrownParams")
+        .def(py::init<>())
+        .def_readwrite("shape", &CrownParams::shape)
+        .def_readwrite("base_size", &CrownParams::base_size)
+        .def_readwrite("height", &CrownParams::height)
+        .def_readwrite("angle_variation", &CrownParams::angle_variation);
+
     py::class_<TreeFunction, std::shared_ptr<TreeFunction>>(m, "TreeFunction")
         .def_readwrite("seed", &TreeFunction::seed)
         .def("add_child", &TreeFunction::add_child);
@@ -107,9 +114,7 @@ PYBIND11_MODULE(m_tree, m) {
         .def_readwrite("start_angle", &BranchFunction::start_angle)
         .def_readwrite("split_angle", &BranchFunction::split_angle)
         .def_readwrite("split_proba", &BranchFunction::split_proba)
-        .def_readwrite("crown_shape", &BranchFunction::crown_shape)
-        .def_readwrite("crown_base_size", &BranchFunction::crown_base_size)
-        .def_readwrite("crown_height", &BranchFunction::crown_height)
+        .def_readwrite("crown", &BranchFunction::crown)
         ;
 
     py::class_<GrowthFunction, std::shared_ptr<GrowthFunction>, TreeFunction>(m, "GrowthFunction")
