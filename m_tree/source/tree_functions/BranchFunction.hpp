@@ -10,29 +10,46 @@
 
 namespace Mtree
 {
+
+// Parameter groupings for BranchFunction
+struct SplitParams
+{
+    float radius = 0.9f;       // Radius multiplier for split branches (0 < x < 1)
+    float angle = 45.0f;       // Angle between split branches (degrees)
+    float probability = 0.5f;  // Probability of a branch splitting (0 < x)
+};
+
+struct GravityParams
+{
+    float strength = 10.0f;      // How much branches bend under their weight
+    float stiffness = 0.1f;      // Resistance to bending from gravity
+    float up_attraction = 0.25f; // Tendency to grow upward (negative values droop)
+};
+
+struct DistributionParams
+{
+    float start = 0.1f;          // Position along parent where branches start (0-1)
+    float end = 1.0f;            // Position along parent where branches end (0-1)
+    float density = 2.0f;        // Number of branches per unit length (0 < x)
+    float phillotaxis = 137.5f;  // Spiral angle between branches (degrees)
+};
+
 class BranchFunction : public TreeFunction
 {
   public:
-	float start = .1;
-	float end = 1;
-	float branches_density = 2;                         // 0 < x
 	PropertyWrapper length{ConstantProperty(9)};        // x > 0
 	PropertyWrapper start_radius{ConstantProperty(.4)}; // 0 > x > 1
 	float end_radius = .05;
 	float break_chance = .01; // 0 < x
 	float resolution = 3;     // 0 < x
 	PropertyWrapper randomness{ConstantProperty(.4)};
-	float phillotaxis = 137.5f;
-	float gravity_strength = 10;
-	float stiffness = .1;
-	float up_attraction = .25;
 	float flatness = .5;                               // 0 < x  < 1
-	float split_radius = .9f;                          // 0 < x < 1
 	PropertyWrapper start_angle{ConstantProperty(45)}; // -180 < x < 180
-	float split_angle = 45.0f;
-	float split_proba = .5f; // 0 < x
 
-	// Crown shape envelope parameters
+	// Parameter groupings
+	std::shared_ptr<SplitParams> split = std::make_shared<SplitParams>();
+	std::shared_ptr<GravityParams> gravity = std::make_shared<GravityParams>();
+	std::shared_ptr<DistributionParams> distribution = std::make_shared<DistributionParams>();
 	std::shared_ptr<CrownParams> crown = std::make_shared<CrownParams>();
 
 	void execute(std::vector<Stem>& stems, int id, int parent_id) override;

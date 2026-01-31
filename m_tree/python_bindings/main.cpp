@@ -41,6 +41,25 @@ PYBIND11_MODULE(m_tree, m) {
         .def_readwrite("height", &CrownParams::height)
         .def_readwrite("angle_variation", &CrownParams::angle_variation);
 
+    py::class_<SplitParams, std::shared_ptr<SplitParams>>(m, "SplitParams")
+        .def(py::init<>())
+        .def_readwrite("radius", &SplitParams::radius)
+        .def_readwrite("angle", &SplitParams::angle)
+        .def_readwrite("probability", &SplitParams::probability);
+
+    py::class_<GravityParams, std::shared_ptr<GravityParams>>(m, "GravityParams")
+        .def(py::init<>())
+        .def_readwrite("strength", &GravityParams::strength)
+        .def_readwrite("stiffness", &GravityParams::stiffness)
+        .def_readwrite("up_attraction", &GravityParams::up_attraction);
+
+    py::class_<DistributionParams, std::shared_ptr<DistributionParams>>(m, "DistributionParams")
+        .def(py::init<>())
+        .def_readwrite("start", &DistributionParams::start)
+        .def_readwrite("end", &DistributionParams::end)
+        .def_readwrite("density", &DistributionParams::density)
+        .def_readwrite("phillotaxis", &DistributionParams::phillotaxis);
+
     py::class_<TreeFunction, std::shared_ptr<TreeFunction>>(m, "TreeFunction")
         .def_readwrite("seed", &TreeFunction::seed)
         .def("add_child", &TreeFunction::add_child);
@@ -97,23 +116,17 @@ PYBIND11_MODULE(m_tree, m) {
     py::class_<BranchFunction, std::shared_ptr<BranchFunction>, TreeFunction>(m, "BranchFunction")
         .def(py::init<>())
         .def_readwrite("length", &BranchFunction::length)
-        .def_readwrite("start", &BranchFunction::start)
-        .def_readwrite("end", &BranchFunction::end)
-        .def_readwrite("branches_density", &BranchFunction::branches_density)
         .def_readwrite("resolution", &BranchFunction::resolution)
         .def_readwrite("break_chance", &BranchFunction::break_chance)
         .def_readwrite("start_radius", &BranchFunction::start_radius)
         .def_readwrite("end_radius", &BranchFunction::end_radius)
         .def_readwrite("randomness", &BranchFunction::randomness)
         .def_readwrite("flatness", &BranchFunction::flatness)
-        .def_readwrite("gravity_strength", &BranchFunction::gravity_strength)
-        .def_readwrite("stiffness", &BranchFunction::stiffness)
-        .def_readwrite("up_attraction", &BranchFunction::up_attraction)
-        .def_readwrite("phillotaxis", &BranchFunction::phillotaxis)
-        .def_readwrite("split_radius", &BranchFunction::split_radius)
         .def_readwrite("start_angle", &BranchFunction::start_angle)
-        .def_readwrite("split_angle", &BranchFunction::split_angle)
-        .def_readwrite("split_proba", &BranchFunction::split_proba)
+        // Parameter groupings
+        .def_readwrite("split", &BranchFunction::split)
+        .def_readwrite("gravity", &BranchFunction::gravity)
+        .def_readwrite("distribution", &BranchFunction::distribution)
         .def_readwrite("crown", &BranchFunction::crown)
         ;
 
