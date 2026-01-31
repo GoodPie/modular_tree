@@ -14,6 +14,7 @@ A procedural tree generator addon for Blender using a node-based workflow.
 - **Node-based workflow** - Build trees visually by connecting nodes for full control
 - **Procedural generation** - Control trunk, branches, and leaves with parameters
 - **Multi-level branching** - Chain branch nodes for complex tree structures
+- **Crown shapes** - 8 botanical envelope shapes (conical, spherical, flame, etc.) based on Weber & Penn
 - **L-system growth** - Biologically-inspired growth simulation with apical dominance
 - **Realistic physics** - Gravity, stiffness, and natural spiral patterns (phyllotaxis)
 - **Leaf distribution** - Automatic leaf placement on thin branches via geometry nodes
@@ -70,6 +71,21 @@ Use the **Presets** section in the inspector panel (`N` key) to apply Oak, Pine,
 - **Up Attraction/Gravity** - How branches grow relative to gravity
 - **Split** - Probability and angle of branch splitting
 - **Phyllotaxis** - Spiral angle between branches (137.5 is the golden angle)
+- **Crown Shape** - Control tree silhouette (Cylindrical, Conical, Spherical, Flame, etc.)
+
+### Crown Shape
+Crown Shape controls branch lengths based on height, creating realistic tree silhouettes. Available in the Branch node inspector panel under "Crown Shape":
+
+| Shape | Use Case |
+|-------|----------|
+| Cylindrical | Default, uniform branches |
+| Conical | Pine, fir, spruce (Christmas tree) |
+| Spherical | Oak, maple (round crown) |
+| Hemispherical | Dome-shaped canopy |
+| Flame | Cedar, cypress (pointed top) |
+| Inverse Conical | Wide bottom, narrow top |
+
+Enable **Preview in Viewport** to visualize the envelope. See [Crown Shape Guide](docs/crown_shape_guide.md) for details.
 
 ### Growth Parameters (L-system)
 - **Iterations** - Number of growth cycles
