@@ -2,7 +2,7 @@ schema_version = "1.0.0"
 
 id = "modular_tree"
 name = "Modular Tree"
-version = "5.1.3"
+version = "5.1.4"
 website = "https://github.com/GoodPie/modular_tree"
 tagline = "Procedural node based 3D tree generation"
 maintainer = "GoodPie <brandynbb96@gmail.com>"
@@ -11,6 +11,7 @@ blender_version_min = "5.0.0"
 license = ["SPDX:GPL-3.0-or-later"]
 tags = ["3D View", "Mesh", "Add Curve"]
 wheels = []
+platforms = ["windows-x64", "macos-x64", "macos-arm64", "linux-x64"]
 
 [permissions]
 files = "Export pivot painter textures"
