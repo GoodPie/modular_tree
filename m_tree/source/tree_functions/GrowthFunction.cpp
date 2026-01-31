@@ -190,6 +190,80 @@ void GrowthFunction::update_absolute_position_rec(Node& node, const Vector3& nod
 	}
 }
 
+// Create dormant lateral buds along Ignored nodes
+void GrowthFunction::create_lateral_buds_rec(Node& node, int id, Vector3 pos, float& dist_to_next,
+                                             float& current_length, float total_length, float& philo)
+{
+	BioNodeInfo& info = static_cast<BioNodeInfo&>(*node.growthInfo);
+
+	// Only create buds on Ignored nodes (part of the original trunk structure)
+	if (info.type == BioNodeInfo::NodeType::Ignored && node.children.size() > 0)
+	{
+		float absolute_start = lateral_start * total_length;
+		float absolute_end = lateral_end * total_length;
+		float bud_spacing = 1.0f / (lateral_density + 0.001f);
+
+		// Process this node segment
+		if (current_length + node.length >= absolute_start && current_length < absolute_end)
+		{
+			float remaining = node.length;
+			float pos_in_node = 0;
+
+			// Skip to start zone if needed
+			if (current_length < absolute_start)
+			{
+				float skip = absolute_start - current_length;
+				remaining -= skip;
+				pos_in_node = skip;
+				dist_to_next = 0;
+			}
+
+			// Create buds along this node
+			while (remaining > dist_to_next && current_length + pos_in_node < absolute_end)
+			{
+				pos_in_node += dist_to_next;
+				remaining -= dist_to_next;
+
+				// Create dormant bud
+				philo += philotaxis_angle;
+				Vector3 tangent{std::cos(philo), std::sin(philo), 0};
+				tangent = Geometry::get_look_at_rot(node.direction) * tangent;
+				Vector3 bud_direction = Geometry::lerp(node.direction, tangent, lateral_angle / 90.0f);
+				bud_direction.normalize();
+
+				float position_in_parent = pos_in_node / node.length;
+				float child_radius = node.radius * 0.5f;
+				float child_length = branch_length * 0.5f;
+
+				NodeChild child{Node{bud_direction, node.tangent, child_length, child_radius, id},
+				                position_in_parent};
+				child.node.growthInfo =
+				    std::make_unique<BioNodeInfo>(BioNodeInfo::NodeType::Dormant, 0, philo);
+				node.children.push_back(std::make_shared<NodeChild>(std::move(child)));
+
+				dist_to_next = bud_spacing;
+			}
+
+			dist_to_next -= remaining;
+		}
+		else if (current_length + node.length < absolute_start)
+		{
+			// Before start zone, just track distance
+			dist_to_next = std::max(0.0f, absolute_start - (current_length + node.length));
+		}
+	}
+
+	current_length += node.length;
+	Vector3 child_pos = pos + node.direction * node.length;
+
+	// Recurse into the main continuation (first child only for trunk)
+	if (node.children.size() > 0)
+	{
+		create_lateral_buds_rec(node.children[0]->node, id, child_pos, dist_to_next, current_length,
+		                        total_length, philo);
+	}
+}
+
 void GrowthFunction::execute(std::vector<Stem>& stems, int id, int parent_id)
 {
 	rand_gen.set_seed(seed);
@@ -197,6 +271,20 @@ void GrowthFunction::execute(std::vector<Stem>& stems, int id, int parent_id)
 	for (Stem& stem : stems)
 	{
 		setup_growth_information_rec(stem.node);
+	}
+
+	// Create dormant lateral buds before growth iterations
+	if (enable_lateral_branching)
+	{
+		for (Stem& stem : stems)
+		{
+			float total_length = NodeUtilities::get_branch_length(stem.node);
+			float dist_to_next = lateral_start * total_length;
+			float current_length = 0;
+			float philo = 0;
+			create_lateral_buds_rec(stem.node, id, stem.position, dist_to_next, current_length,
+			                        total_length, philo);
+		}
 	}
 
 	for (size_t i = 0; i < iterations; i++) // an iteration can be seen as a year of growth

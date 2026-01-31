@@ -38,7 +38,19 @@ class GrowthFunction : public TreeFunction
 
 	float root_flux = 5;
 
+	// Lateral branching parameters
+	bool enable_lateral_branching = true;
+	float lateral_start = 0.1f;       // Start position along parent (0-1)
+	float lateral_end = 0.9f;         // End position along parent (0-1)
+	float lateral_density = 2.0f;     // Potential branch points per unit length
+	float lateral_activation = 0.4f;  // Vigor threshold to activate dormant buds
+	float lateral_angle = 45.0f;      // Initial angle from parent direction
+
 	void execute(std::vector<Stem>& stems, int id, int parent_id) override;
+
+  private:
+	void create_lateral_buds_rec(Node& node, int id, Vector3 pos, float& dist_to_next,
+	                             float& current_length, float total_length, float& philo);
 };
 
 class BioNodeInfo : public GrowthInfo
