@@ -16,6 +16,7 @@ class GrowthFunction : public TreeFunction
 
   public:
 	int iterations = 5;
+	int preview_iteration = -1;  // -1 means run all iterations
 	float apical_dominance = .7f;
 	float grow_threshold = .5f;
 	float split_angle = 60;

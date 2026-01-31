@@ -299,7 +299,11 @@ void GrowthFunction::execute(std::vector<Stem>& stems, int id, int parent_id)
 		}
 	}
 
-	for (size_t i = 0; i < iterations; i++) // an iteration can be seen as a year of growth
+	// Determine effective iterations - use preview_iteration if valid, otherwise run all
+	size_t effective_iterations = (preview_iteration >= 0 && preview_iteration < iterations)
+	    ? static_cast<size_t>(preview_iteration) : static_cast<size_t>(iterations);
+
+	for (size_t i = 0; i < effective_iterations; i++) // an iteration can be seen as a year of growth
 	{
 		for (Stem& stem : stems) // the energy is not shared between stems
 		{
