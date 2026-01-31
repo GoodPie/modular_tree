@@ -10,13 +10,18 @@
 
 namespace Mtree
 {
-void setup_growth_information_rec(Node& node)
+void setup_growth_information_rec(Node& node, bool suppress_tip_growth)
 {
+	// When lateral branching is enabled, don't mark tips as Meristem - mark them as Ignored
+	// This prevents the bushy tip growth and lets lateral buds be the primary branch source
+	BioNodeInfo::NodeType tip_type =
+	    suppress_tip_growth ? BioNodeInfo::NodeType::Ignored : BioNodeInfo::NodeType::Meristem;
+
 	node.growthInfo =
-	    std::make_unique<BioNodeInfo>(node.children.size() == 0 ? BioNodeInfo::NodeType::Meristem
+	    std::make_unique<BioNodeInfo>(node.children.size() == 0 ? tip_type
 	                                                            : BioNodeInfo::NodeType::Ignored);
 	for (auto& child : node.children)
-		setup_growth_information_rec(child->node);
+		setup_growth_information_rec(child->node, suppress_tip_growth);
 }
 
 // get total amount of energy from the node and its descendance, and assign for each node the
@@ -37,6 +42,12 @@ float GrowthFunction::update_vigor_ratio_rec(Node& node)
 	else if (info.type == BioNodeInfo::NodeType::Branch ||
 	         info.type == BioNodeInfo::NodeType::Ignored)
 	{
+		// Handle tip nodes marked as Ignored (no children) - they don't contribute energy
+		if (node.children.size() == 0)
+		{
+			info.vigor_ratio = 0;
+			return 0;
+		}
 		float light_flux = update_vigor_ratio_rec(node.children[0]->node);
 		float vigor_ratio = 1;
 		for (size_t i = 1; i < node.children.size(); i++)
@@ -66,8 +77,15 @@ void GrowthFunction::update_vigor_rec(Node& node, float vigor)
 	info.vigor = vigor;
 	for (auto& child : node.children)
 	{
-		float child_vigor =
-		    static_cast<BioNodeInfo*>(child->node.growthInfo.get())->vigor_ratio * vigor;
+		BioNodeInfo* child_info = static_cast<BioNodeInfo*>(child->node.growthInfo.get());
+		float child_vigor = child_info->vigor_ratio * vigor;
+
+		// Give dormant buds a fixed proportion of parent vigor (bypasses competitive apical dominance)
+		if (child_info->type == BioNodeInfo::NodeType::Dormant)
+		{
+			child_vigor = vigor * (1.0f - apical_dominance) * 0.5f;
+		}
+
 		update_vigor_rec(child->node, child_vigor);
 	}
 }
@@ -282,7 +300,7 @@ void GrowthFunction::execute(std::vector<Stem>& stems, int id, int parent_id)
 
 	for (Stem& stem : stems)
 	{
-		setup_growth_information_rec(stem.node);
+		setup_growth_information_rec(stem.node, enable_lateral_branching);
 	}
 
 	// Create dormant lateral buds before growth iterations
