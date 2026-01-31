@@ -76,11 +76,23 @@ void GrowthFunction::update_vigor_rec(Node& node, float vigor)
 void GrowthFunction::simulate_growth_rec(Node& node, int id)
 {
 	BioNodeInfo& info = static_cast<BioNodeInfo&>(*node.growthInfo);
+
+	// Check for dormant bud activation
+	bool activate_dormant =
+	    info.type == BioNodeInfo::NodeType::Dormant && info.vigor > lateral_activation;
+	if (activate_dormant)
+	{
+		// Activate the dormant bud - it becomes a meristem
+		info.type = BioNodeInfo::NodeType::Meristem;
+		node.length = branch_length * (info.vigor + 0.1f);
+	}
+
 	bool primary_growth =
 	    info.type == BioNodeInfo::NodeType::Meristem && info.vigor > grow_threshold;
 	bool secondary_growth =
 	    info.vigor > grow_threshold &&
-	    info.type != BioNodeInfo::NodeType::Ignored; // Todo : should be another parameter
+	    info.type != BioNodeInfo::NodeType::Ignored &&
+	    info.type != BioNodeInfo::NodeType::Dormant; // Dormant buds don't get secondary growth
 	bool split = info.type == BioNodeInfo::NodeType::Meristem && info.vigor > split_threshold;
 	bool cut = info.type == BioNodeInfo::NodeType::Meristem && info.vigor < cut_threshold;
 	int child_count = node.children.size();
