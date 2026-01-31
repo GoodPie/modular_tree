@@ -317,8 +317,10 @@ BranchFunction::get_origins(std::vector<Stem>& stems, const int id, const int pa
 						    (node_position + node.direction * node.length * position_in_parent).z();
 						if (branch_z >= crown_start_z)
 						{
-							float height_ratio =
-							    std::min(1.0f, (branch_z - crown_start_z) / crown_zone_height);
+							// Ratio goes from 1.0 at crown base to 0.0 at top, matching Weber &
+							// Penn paper convention where ratio represents "distance from top"
+							float height_ratio = 1.0f - std::min(1.0f, (branch_z - crown_start_z) /
+							                                               crown_zone_height);
 							branch_length *=
 							    CrownShapeUtils::get_shape_ratio(crown_shape, height_ratio);
 						}
