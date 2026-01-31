@@ -11,6 +11,7 @@ from ..base_types.node import MtreeFunctionNode
 BASIC_PARAMS = ["seed", "start", "end", "length", "branches_density", "start_angle"]
 SHAPE_PARAMS = ["randomness", "flatness", "up_attraction", "gravity_strength", "stiffness"]
 SPLIT_PARAMS = ["split_proba", "split_radius", "split_angle", "phillotaxis"]
+CROWN_PARAMS = ["crown_base_size", "crown_height"]
 ADVANCED_PARAMS = ["break_chance", "resolution", "start_radius"]
 
 # Parameter descriptions for tooltips
@@ -30,6 +31,8 @@ PARAM_DESCRIPTIONS = {
     "split_radius": "Minimum radius for splits to occur",
     "split_angle": "Angle between split branches",
     "phillotaxis": "Spiral angle between branches (137.5 is golden angle)",
+    "crown_base_size": "Fraction of trunk where crown starts (0=ground, 1=top)",
+    "crown_height": "Total crown height (-1=auto-detect from trunk)",
     "break_chance": "Probability of a branch breaking/stopping",
     "resolution": "Number of segments per unit length",
     "start_radius": "Branch radius at base relative to parent",
@@ -44,11 +47,45 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
     show_basic: bpy.props.BoolProperty(name="Basic", default=True)
     show_shape: bpy.props.BoolProperty(name="Shape", default=True)
     show_split: bpy.props.BoolProperty(name="Splitting", default=False)
+    show_crown: bpy.props.BoolProperty(name="Crown Shape", default=False)
     show_advanced: bpy.props.BoolProperty(name="Advanced", default=False)
+
+    # Crown shape enum
+    crown_shape: bpy.props.EnumProperty(
+        name="Crown Shape",
+        items=[
+            ("CYLINDRICAL", "Cylindrical", "Uniform branch length (default)"),
+            ("CONICAL", "Conical", "Longer at top (pine/fir)"),
+            ("SPHERICAL", "Spherical", "Round crown (oak/maple)"),
+            ("HEMISPHERICAL", "Hemispherical", "Dome-shaped"),
+            ("TAPERED_CYLINDRICAL", "Tapered Cylindrical", "Gradual taper"),
+            ("FLAME", "Flame", "Flame-shaped (cedar)"),
+            ("INVERSE_CONICAL", "Inverse Conical", "Wider at bottom"),
+            ("TEND_FLAME", "Tend Flame", "Soft flame shape"),
+        ],
+        default="CYLINDRICAL",
+        description="Crown shape envelope that controls branch length based on height",
+    )
 
     @property
     def tree_function(self):
         return lazy_m_tree.BranchFunction
+
+    def construct_function(self):
+        func = super().construct_function()
+        # Map Blender enum to C++ enum
+        shape_map = {
+            "CYLINDRICAL": lazy_m_tree.CrownShape.Cylindrical,
+            "CONICAL": lazy_m_tree.CrownShape.Conical,
+            "SPHERICAL": lazy_m_tree.CrownShape.Spherical,
+            "HEMISPHERICAL": lazy_m_tree.CrownShape.Hemispherical,
+            "TAPERED_CYLINDRICAL": lazy_m_tree.CrownShape.TaperedCylindrical,
+            "FLAME": lazy_m_tree.CrownShape.Flame,
+            "INVERSE_CONICAL": lazy_m_tree.CrownShape.InverseConical,
+            "TEND_FLAME": lazy_m_tree.CrownShape.TendFlame,
+        }
+        func.crown_shape = shape_map.get(self.crown_shape, lazy_m_tree.CrownShape.Cylindrical)
+        return func
 
     def init(self, context):
         self.add_input("mt_TreeSocket", "Tree", is_property=False)
@@ -183,6 +220,25 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
             description=PARAM_DESCRIPTIONS["phillotaxis"],
         )
 
+        # Crown shape parameters
+        self.add_input(
+            "mt_FloatSocket",
+            "Crown Base Size",
+            min_value=0,
+            max_value=1,
+            property_name="crown_base_size",
+            property_value=0.0,
+            description=PARAM_DESCRIPTIONS["crown_base_size"],
+        )
+        self.add_input(
+            "mt_FloatSocket",
+            "Crown Height",
+            min_value=-1,
+            property_name="crown_height",
+            property_value=-1.0,
+            description=PARAM_DESCRIPTIONS["crown_height"],
+        )
+
         # Advanced parameters
         self.add_input(
             "mt_FloatSocket",
@@ -277,4 +333,31 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
         self._draw_section(layout, "Basic", "show_basic", BASIC_PARAMS)
         self._draw_section(layout, "Shape", "show_shape", SHAPE_PARAMS)
         self._draw_section(layout, "Splitting", "show_split", SPLIT_PARAMS)
+
+        # Crown shape section with enum dropdown
+        box = layout.box()
+        row = box.row()
+        show = self.show_crown
+        row.prop(
+            self,
+            "show_crown",
+            icon="TRIA_DOWN" if show else "TRIA_RIGHT",
+            icon_only=True,
+            emboss=False,
+        )
+        row.label(text="Crown Shape")
+
+        if show:
+            box.prop(self, "crown_shape", text="")
+            box.label(text="Controls branch length based on height", icon="INFO")
+            for param in CROWN_PARAMS:
+                socket = self._get_socket_by_property(param)
+                if socket and socket.is_property:
+                    col = box.column()
+                    socket.draw(bpy.context, col, self, socket.name)
+                    if param in PARAM_DESCRIPTIONS:
+                        sub = col.row()
+                        sub.scale_y = 0.6
+                        sub.label(text=f"  {PARAM_DESCRIPTIONS[param]}")
+
         self._draw_section(layout, "Advanced", "show_advanced", ADVANCED_PARAMS)
