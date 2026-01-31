@@ -105,18 +105,34 @@ void GrowthFunction::simulate_growth_rec(Node& node, int id)
 		node.length = branch_length * (info.vigor + 0.1f);
 	}
 
+	// Newly activated buds always grow (skip grow_threshold check)
 	bool primary_growth =
-	    info.type == BioNodeInfo::NodeType::Meristem && info.vigor > grow_threshold;
+	    info.type == BioNodeInfo::NodeType::Meristem &&
+	    (activate_dormant || info.vigor > grow_threshold);
 	bool secondary_growth =
 	    info.vigor > grow_threshold &&
 	    info.type != BioNodeInfo::NodeType::Ignored &&
 	    info.type != BioNodeInfo::NodeType::Dormant; // Dormant buds don't get secondary growth
 	bool split = info.type == BioNodeInfo::NodeType::Meristem && info.vigor > split_threshold;
 	bool cut = info.type == BioNodeInfo::NodeType::Meristem && info.vigor < cut_threshold;
+
+	// Flower check - vigor low but above cut threshold
+	bool become_flower = enable_flowering &&
+	    info.type == BioNodeInfo::NodeType::Meristem &&
+	    info.vigor < flower_threshold &&
+	    info.vigor >= cut_threshold;
+
 	int child_count = node.children.size();
 	if (cut)
 	{
 		info.type = BioNodeInfo::NodeType::Cut;
+		return;
+	}
+
+	// Mark as flower point - flowers don't grow further
+	if (become_flower)
+	{
+		info.type = BioNodeInfo::NodeType::Flower;
 		return;
 	}
 	info.age++;
