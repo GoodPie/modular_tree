@@ -49,7 +49,8 @@ class BioNodeInfo : public GrowthInfo
 		Meristem,
 		Branch,
 		Cut,
-		Ignored
+		Ignored,
+		Dormant
 	} type;
 	float branch_weight = 0;
 	Vector3 center_of_mass;

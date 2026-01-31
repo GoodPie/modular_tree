@@ -27,6 +27,12 @@ float GrowthFunction::update_vigor_ratio_rec(Node& node)
 	{
 		return 1;
 	}
+	else if (info.type == BioNodeInfo::NodeType::Dormant)
+	{
+		// Dormant buds request less energy (suppressed by apical dominance)
+		info.vigor_ratio = 0.3f;
+		return 0.3f;
+	}
 	else if (info.type == BioNodeInfo::NodeType::Branch ||
 	         info.type == BioNodeInfo::NodeType::Ignored)
 	{
