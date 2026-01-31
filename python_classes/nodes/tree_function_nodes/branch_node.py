@@ -5,6 +5,8 @@ from random import randint
 import bpy
 
 from ...m_tree_wrapper import lazy_m_tree
+from ...viewport.shape_formulas import BLENDER_SHAPE_MAP
+from ...viewport.shape_formulas import CrownShape as PyCrownShape
 from ..base_types.node import MtreeFunctionNode
 
 # Parameter groupings for organized UI
@@ -44,11 +46,105 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
     show_basic: bpy.props.BoolProperty(name="Basic", default=True)
     show_shape: bpy.props.BoolProperty(name="Shape", default=True)
     show_split: bpy.props.BoolProperty(name="Splitting", default=False)
+    show_crown: bpy.props.BoolProperty(name="Crown Shape", default=False)
     show_advanced: bpy.props.BoolProperty(name="Advanced", default=False)
+
+    # Crown shape enum
+    crown_shape: bpy.props.EnumProperty(
+        name="Crown Shape",
+        items=[
+            ("CYLINDRICAL", "Cylindrical", "Uniform branch length (default)"),
+            ("CONICAL", "Conical", "Longer at top (pine/fir)"),
+            ("SPHERICAL", "Spherical", "Round crown (oak/maple)"),
+            ("HEMISPHERICAL", "Hemispherical", "Dome-shaped"),
+            ("TAPERED_CYLINDRICAL", "Tapered Cylindrical", "Gradual taper"),
+            ("FLAME", "Flame", "Flame-shaped (cedar)"),
+            ("INVERSE_CONICAL", "Inverse Conical", "Wider at bottom"),
+            ("TEND_FLAME", "Tend Flame", "Soft flame shape"),
+        ],
+        default="CYLINDRICAL",
+        description="Crown shape envelope that controls branch length based on height",
+    )
+
+    angle_variation: bpy.props.FloatProperty(
+        name="Angle Spread",
+        default=0.0,
+        min=-45.0,
+        max=45.0,
+        description="Height-based angle variation: positive = upward at top, downward at base",
+    )
+
+    show_crown_preview: bpy.props.BoolProperty(
+        name="Show Preview",
+        default=False,
+        description="Show crown shape envelope in 3D viewport",
+    )
 
     @property
     def tree_function(self):
         return lazy_m_tree.BranchFunction
+
+    def draw(self, context, layout):
+        layout.prop(self, "crown_shape", text="Crown")
+
+    # Mapping from socket property_name to nested struct path
+    NESTED_PROPERTY_MAP = {
+        # Distribution params
+        "start": ("distribution", "start"),
+        "end": ("distribution", "end"),
+        "branches_density": ("distribution", "density"),
+        "phillotaxis": ("distribution", "phillotaxis"),
+        # Gravity params
+        "gravity_strength": ("gravity", "strength"),
+        "stiffness": ("gravity", "stiffness"),
+        "up_attraction": ("gravity", "up_attraction"),
+        # Split params
+        "split_proba": ("split", "probability"),
+        "split_radius": ("split", "radius"),
+        "split_angle": ("split", "angle"),
+    }
+
+    def construct_function(self):
+        func = self.tree_function()
+
+        # Handle exposed_parameters (from base class pattern)
+        for parameter in self.exposed_parameters:
+            setattr(func, parameter, getattr(self, parameter))
+
+        # Handle input sockets with nested property mapping
+        for input_socket in self.inputs:
+            if not input_socket.is_property:
+                continue
+
+            prop_name = input_socket.property_name
+            if input_socket.bl_idname == "mt_PropertySocket":
+                value = input_socket.get_property()
+            else:
+                value = input_socket.property_value
+
+            # Check if this is a nested property
+            if prop_name in self.NESTED_PROPERTY_MAP:
+                struct_name, field_name = self.NESTED_PROPERTY_MAP[prop_name]
+                struct = getattr(func, struct_name)
+                setattr(struct, field_name, value)
+            else:
+                setattr(func, prop_name, value)
+
+        # Map Blender enum to C++ enum for crown shape
+        # Uses shared BLENDER_SHAPE_MAP and converts via int (both enums share same values)
+        py_shape = BLENDER_SHAPE_MAP.get(self.crown_shape, PyCrownShape.Cylindrical)
+        func.crown.shape = lazy_m_tree.CrownShape(int(py_shape))
+        func.crown.angle_variation = self.angle_variation
+
+        # Handle child nodes
+        for child in self.get_child_nodes():
+            from ..base_types.node import MtreeFunctionNode
+
+            if isinstance(child, MtreeFunctionNode):
+                child_function = child.construct_function()
+                func.add_child(child_function)
+
+        return func
 
     def init(self, context):
         self.add_input("mt_TreeSocket", "Tree", is_property=False)
@@ -277,4 +373,24 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
         self._draw_section(layout, "Basic", "show_basic", BASIC_PARAMS)
         self._draw_section(layout, "Shape", "show_shape", SHAPE_PARAMS)
         self._draw_section(layout, "Splitting", "show_split", SPLIT_PARAMS)
+
+        # Crown shape section with enum dropdown
+        box = layout.box()
+        row = box.row()
+        show = self.show_crown
+        row.prop(
+            self,
+            "show_crown",
+            icon="TRIA_DOWN" if show else "TRIA_RIGHT",
+            icon_only=True,
+            emboss=False,
+        )
+        row.label(text="Crown Shape")
+
+        if show:
+            box.prop(self, "crown_shape", text="")
+            box.prop(self, "show_crown_preview", text="Preview in Viewport")
+            box.prop(self, "angle_variation", text="Angle Spread")
+            box.label(text="Controls branch length and angle based on height", icon="INFO")
+
         self._draw_section(layout, "Advanced", "show_advanced", ADVANCED_PARAMS)

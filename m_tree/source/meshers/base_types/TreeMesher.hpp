@@ -7,6 +7,8 @@ namespace Mtree
 class TreeMesher
 {
   public:
+	virtual ~TreeMesher() = default;
+
 	virtual Mesh mesh_tree(Tree& tree) = 0;
 };
 } // namespace Mtree
