@@ -57,4 +57,13 @@ inline float get_shape_ratio(CrownShape shape, float ratio)
 }
 
 } // namespace CrownShapeUtils
+
+struct CrownParams
+{
+    CrownShape shape = CrownShape::Cylindrical;
+    float base_size = 0.0f;
+    float height = -1.0f;           // -1 = auto-detect from trunk
+    float angle_variation = 0.0f;   // Height-based angle variation (degrees)
+};
+
 } // namespace Mtree
