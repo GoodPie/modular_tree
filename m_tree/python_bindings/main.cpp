@@ -110,6 +110,13 @@ PYBIND11_MODULE(m_tree, m) {
         .def_readwrite("gravitropism", &GrowthFunction::gravitropism)
         .def_readwrite("randomness", &GrowthFunction::randomness)
         .def_readwrite("gravity_strength", &GrowthFunction::gravity_strength)
+        // Lateral branching parameters
+        .def_readwrite("enable_lateral_branching", &GrowthFunction::enable_lateral_branching)
+        .def_readwrite("lateral_start", &GrowthFunction::lateral_start)
+        .def_readwrite("lateral_end", &GrowthFunction::lateral_end)
+        .def_readwrite("lateral_density", &GrowthFunction::lateral_density)
+        .def_readwrite("lateral_activation", &GrowthFunction::lateral_activation)
+        .def_readwrite("lateral_angle", &GrowthFunction::lateral_angle)
         ;
 
 
