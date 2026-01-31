@@ -11,7 +11,6 @@ from ..base_types.node import MtreeFunctionNode
 BASIC_PARAMS = ["seed", "start", "end", "length", "branches_density", "start_angle"]
 SHAPE_PARAMS = ["randomness", "flatness", "up_attraction", "gravity_strength", "stiffness"]
 SPLIT_PARAMS = ["split_proba", "split_radius", "split_angle", "phillotaxis"]
-CROWN_PARAMS = ["crown_base_size", "crown_height"]
 ADVANCED_PARAMS = ["break_chance", "resolution", "start_radius"]
 
 # Parameter descriptions for tooltips
@@ -31,8 +30,6 @@ PARAM_DESCRIPTIONS = {
     "split_radius": "Minimum radius for splits to occur",
     "split_angle": "Angle between split branches",
     "phillotaxis": "Spiral angle between branches (137.5 is golden angle)",
-    "crown_base_size": "Fraction of trunk where crown starts (0=ground, 1=top)",
-    "crown_height": "Total crown height (-1=auto-detect from trunk)",
     "break_chance": "Probability of a branch breaking/stopping",
     "resolution": "Number of segments per unit length",
     "start_radius": "Branch radius at base relative to parent",
@@ -70,6 +67,9 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
     @property
     def tree_function(self):
         return lazy_m_tree.BranchFunction
+
+    def draw(self, context, layout):
+        layout.prop(self, "crown_shape", text="Crown")
 
     def construct_function(self):
         func = super().construct_function()
@@ -220,25 +220,6 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
             description=PARAM_DESCRIPTIONS["phillotaxis"],
         )
 
-        # Crown shape parameters
-        self.add_input(
-            "mt_FloatSocket",
-            "Crown Base Size",
-            min_value=0,
-            max_value=1,
-            property_name="crown_base_size",
-            property_value=0.0,
-            description=PARAM_DESCRIPTIONS["crown_base_size"],
-        )
-        self.add_input(
-            "mt_FloatSocket",
-            "Crown Height",
-            min_value=-1,
-            property_name="crown_height",
-            property_value=-1.0,
-            description=PARAM_DESCRIPTIONS["crown_height"],
-        )
-
         # Advanced parameters
         self.add_input(
             "mt_FloatSocket",
@@ -350,14 +331,5 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
         if show:
             box.prop(self, "crown_shape", text="")
             box.label(text="Controls branch length based on height", icon="INFO")
-            for param in CROWN_PARAMS:
-                socket = self._get_socket_by_property(param)
-                if socket and socket.is_property:
-                    col = box.column()
-                    socket.draw(bpy.context, col, self, socket.name)
-                    if param in PARAM_DESCRIPTIONS:
-                        sub = col.row()
-                        sub.scale_y = 0.6
-                        sub.label(text=f"  {PARAM_DESCRIPTIONS[param]}")
 
         self._draw_section(layout, "Advanced", "show_advanced", ADVANCED_PARAMS)
