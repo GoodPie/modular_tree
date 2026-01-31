@@ -70,21 +70,18 @@ def draw_crown_envelope():
         # Iterate through all MTree node trees
         for node_tree in get_all_mtree_node_trees():
             # Find Branch nodes with preview enabled
-            branch_nodes_to_draw = []
-            for node in node_tree.nodes:
-                if node.bl_idname == "mt_BranchNode":
-                    if getattr(node, "show_crown_preview", False):
-                        branch_nodes_to_draw.append(node)
+            branch_nodes_to_draw = [
+                node
+                for node in node_tree.nodes
+                if node.bl_idname == "mt_BranchNode" and getattr(node, "show_crown_preview", False)
+            ]
 
             if not branch_nodes_to_draw:
                 continue
 
             # Get tree object location for positioning
             tree_object = get_tree_object_from_node_tree(node_tree)
-            if tree_object:
-                world_matrix = tree_object.matrix_world.copy()
-            else:
-                world_matrix = Matrix.Identity(4)
+            world_matrix = tree_object.matrix_world.copy() if tree_object else Matrix.Identity(4)
 
             # Get trunk length for envelope height
             trunk_length = get_trunk_length_from_node_tree(node_tree)
