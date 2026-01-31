@@ -2,6 +2,7 @@
 #include "GrowthFunction.hpp"
 #include "./base_types/TreeFunction.hpp"
 #include "source/utilities/GeometryUtilities.hpp"
+#include "source/utilities/NodeUtilities.hpp"
 #include <Eigen/Geometry>
 #include <iostream>
 #include <math.h>
