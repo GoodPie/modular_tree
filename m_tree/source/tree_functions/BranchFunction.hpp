@@ -4,6 +4,7 @@
 #include "source/tree_functions/base_types/Property.hpp"
 #include "source/utilities/GeometryUtilities.hpp"
 #include "source/utilities/NodeUtilities.hpp"
+#include <memory>
 #include <queue>
 #include <vector>
 
@@ -32,9 +33,7 @@ class BranchFunction : public TreeFunction
 	float split_proba = .5f; // 0 < x
 
 	// Crown shape envelope parameters
-	CrownShape crown_shape = CrownShape::Cylindrical;
-	float crown_base_size = 0.0f;
-	float crown_height = -1.0f; // -1 = auto-detect from trunk
+	std::shared_ptr<CrownParams> crown = std::make_shared<CrownParams>();
 
 	void execute(std::vector<Stem>& stems, int id, int parent_id) override;
 

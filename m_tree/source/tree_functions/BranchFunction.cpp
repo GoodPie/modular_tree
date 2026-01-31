@@ -9,6 +9,8 @@ using namespace Mtree;
 
 namespace
 {
+constexpr float EPSILON = 0.001f;
+
 void update_positions_rec(Node& node, const Vector3& position)
 {
 	auto& info = static_cast<BranchFunction::BranchGrowthInfo&>(*node.growthInfo);
@@ -239,13 +241,13 @@ BranchFunction::get_origins(std::vector<Stem>& stems, const int id, const int pa
 	std::vector<std::reference_wrapper<Node>> origins;
 
 	// Calculate effective crown height for shape envelope
-	float effective_crown_height = crown_height;
+	float effective_crown_height = crown->height;
 	if (effective_crown_height < 0 && parent_id == 0 && stems.size() > 0)
 	{
 		effective_crown_height = NodeUtilities::get_branch_length(stems[0].node);
 	}
-	float crown_start_z = effective_crown_height * crown_base_size;
-	float crown_zone_height = effective_crown_height * (1.0f - crown_base_size);
+	float crown_start_z = effective_crown_height * crown->base_size;
+	float crown_zone_height = effective_crown_height * (1.0f - crown->base_size);
 
 	float origins_dist = 1 / (branches_density + .001); // distance between two consecutive origins
 
@@ -304,27 +306,49 @@ BranchFunction::get_origins(std::vector<Stem>& stems, const int id, const int pa
 					tangent = rot * tangent;
 					Geometry::project_on_plane(tangent, node.direction);
 					tangent.normalize();
-					Vector3 child_direction =
-					    Geometry::lerp(node.direction, tangent, start_angle.execute(factor) / 90);
-					child_direction.normalize();
 					float child_radius = node.radius * start_radius.execute(factor);
 					float branch_length = length.execute(factor);
+					float effective_start_angle = start_angle.execute(factor);
 
-					// Apply crown shape envelope
-					if (crown_shape != CrownShape::Cylindrical && crown_zone_height > 0.001f)
+					// Calculate height-based modifications for crown shape and angle
+					bool needs_height_calc = crown_zone_height > EPSILON &&
+					    (crown->shape != CrownShape::Cylindrical ||
+					     std::abs(crown->angle_variation) > EPSILON);
+
+					if (needs_height_calc)
 					{
 						float branch_z =
 						    (node_position + node.direction * node.length * position_in_parent).z();
+
 						if (branch_z >= crown_start_z)
 						{
 							// Ratio goes from 1.0 at crown base to 0.0 at top, matching Weber &
 							// Penn paper convention where ratio represents "distance from top"
 							float height_ratio = 1.0f - std::min(1.0f, (branch_z - crown_start_z) /
 							                                               crown_zone_height);
-							branch_length *=
-							    CrownShapeUtils::get_shape_ratio(crown_shape, height_ratio);
+
+							// Crown shape length multiplier
+							if (crown->shape != CrownShape::Cylindrical)
+							{
+								branch_length *=
+								    CrownShapeUtils::get_shape_ratio(crown->shape, height_ratio);
+							}
+
+							// Height-based angle variation (always uses Conical per W&P paper)
+							if (std::abs(crown->angle_variation) > EPSILON)
+							{
+								float shape_ratio = CrownShapeUtils::get_shape_ratio(
+								    CrownShape::Conical, height_ratio);
+								float angle_offset = crown->angle_variation * (1.0f - 2.0f * shape_ratio);
+								effective_start_angle = std::clamp(
+								    effective_start_angle + angle_offset, 0.0f, 180.0f);
+							}
 						}
 					}
+
+					Vector3 child_direction =
+					    Geometry::lerp(node.direction, tangent, effective_start_angle / 90);
+					child_direction.normalize();
 
 					float node_length = std::min(branch_length, 1 / (resolution + 0.001f));
 					NodeChild child{
