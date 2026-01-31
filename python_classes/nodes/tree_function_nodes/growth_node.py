@@ -291,7 +291,7 @@ class GrowthNode(bpy.types.Node, MtreeFunctionNode):
         for param_name, param_value in preset.items():
             socket = self._get_socket_by_property(param_name)
             if socket:
-                socket.property_value = float(param_value)
+                socket.property_value = param_value
 
     def _draw_section(self, layout, title: str, show_prop: str, params: list) -> None:
         """Draw a collapsible section with parameters."""
