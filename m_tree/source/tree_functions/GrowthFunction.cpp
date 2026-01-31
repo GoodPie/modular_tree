@@ -111,7 +111,7 @@ void GrowthFunction::simulate_growth_rec(Node& node, int id)
 		Vector3 child_direction =
 		    node.direction + Vector3{0, 0, 1} * gravitropism + Geometry::random_vec() * randomness;
 		child_direction.normalize();
-		float child_radius = node.radius;
+		float child_radius = node.radius * 0.95f;  // Taper branches as they extend
 		float child_length = branch_length * (info.vigor + .1f);
 		NodeChild child =
 		    NodeChild{Node{child_direction, node.tangent, branch_length, child_radius, id}, 1};
@@ -129,7 +129,7 @@ void GrowthFunction::simulate_growth_rec(Node& node, int id)
 		tangent = Geometry::get_look_at_rot(node.direction) * tangent;
 		Vector3 child_direction = Geometry::lerp(node.direction, tangent, split_angle / 90);
 		child_direction.normalize();
-		float child_radius = node.radius;
+		float child_radius = node.radius * 0.9f;  // Split branches taper more
 		float child_length = branch_length * (info.vigor + .1f);
 		NodeChild child =
 		    NodeChild{Node{child_direction, node.tangent, branch_length, child_radius, id}, 1};
@@ -244,7 +244,7 @@ void GrowthFunction::create_lateral_buds_rec(Node& node, int id, Vector3 pos, fl
 				bud_direction.normalize();
 
 				float position_in_parent = pos_in_node / node.length;
-				float child_radius = node.radius * 0.5f;
+				float child_radius = node.radius * 0.8f;  // Inherit most of parent radius for natural connection
 				float child_length = branch_length * 0.5f;
 
 				NodeChild child{Node{bud_direction, node.tangent, child_length, child_radius, id},
