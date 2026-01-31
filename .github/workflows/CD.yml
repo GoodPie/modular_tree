@@ -5,9 +5,9 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/ruff-action@v1
-      - uses: astral-sh/ruff-action@v1
+      - uses: actions/checkout@v6
+      - uses: astral-sh/ruff-action@v3
+      - uses: astral-sh/ruff-action@v3
         with:
           args: "format --check"
 
@@ -15,7 +15,7 @@ jobs:
     needs: lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: true
 
@@ -44,10 +44,10 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           submodules: true
-      - uses: pypa/cibuildwheel@v2.21
+      - uses: pypa/cibuildwheel@v3.3
         with:
           package-dir: m_tree
         env:
@@ -66,7 +66,7 @@ jobs:
             cd /d {package}\dependencies\vcpkg &&
             bootstrap-vcpkg.bat &&
             vcpkg install eigen3:x64-windows
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
@@ -75,12 +75,12 @@ jobs:
     needs: build-wheels
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
-      - uses: astral-sh/setup-uv@v5
-      - uses: actions/download-artifact@v4
+      - uses: astral-sh/setup-uv@v7
+      - uses: actions/download-artifact@v7
         with:
           name: wheels-ubuntu-latest
           path: wheels
@@ -96,11 +96,11 @@ jobs:
     needs: [build-wheels, test-python]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           path: wheels
           merge-multiple: true
@@ -108,7 +108,7 @@ jobs:
         run: ls -R wheels
       - name: Package addon
         run: python .github/scripts/setup_addon.py
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: modular_tree_extension
           path: tmp/*.zip
@@ -119,8 +119,8 @@ jobs:
     env:
       STATUS: ${{ !endsWith(github.ref, 'master') && 'alpha' || '' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v7
         with:
           name: modular_tree_extension
           path: release
