@@ -95,7 +95,10 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
             start_time = time.time()
 
             tree = m_tree.Tree()
-            trunk_function = self.outputs[0].links[0].to_node.construct_function()
+            output_links = self.outputs[0].links
+            if not output_links:
+                raise ValueError("No connected trunk node")
+            trunk_function = output_links[0].to_node.construct_function()
             tree.set_trunk_function(trunk_function)
             tree.execute_functions()
 
@@ -133,6 +136,8 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
         """Output the C++ mesh to a Blender object."""
         tree_obj = self.get_current_tree_object()
         tree_mesh = tree_obj.data
+        if not isinstance(tree_mesh, bpy.types.Mesh):
+            raise TypeError("Tree object data is not a Mesh")
         tree_mesh.clear_geometry()
         bpy.context.view_layer.objects.active = tree_obj
 
@@ -140,7 +145,8 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
 
     def get_tree_validity(self):
         """Check if the tree node setup is valid."""
-        has_valid_child = len(self.outputs[0].links) == 1
+        output_links = self.outputs[0].links
+        has_valid_child = output_links is not None and len(output_links) == 1
         loops_detected = self._detect_loop_rec(self)
         return has_valid_child and not loops_detected
 
@@ -152,6 +158,8 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
             seen_nodes = set()
 
         for output in node.outputs:
+            if output.links is None:
+                continue
             for link in output.links:
                 destination_node = link.to_node
                 if destination_node in seen_nodes:

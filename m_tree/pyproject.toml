@@ -4,7 +4,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "m_tree"
-version = "5.1.4"
+version = "5.1.5"
 description = "Procedural 3D tree generation library"
 requires-python = ">=3.11"
 

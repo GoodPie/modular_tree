@@ -94,6 +94,8 @@ class MtreeFunctionNode(MtreeNode):
             layout.prop(self, parameter)
 
     def construct_function(self):
+        if self.tree_function is None:
+            raise ValueError(f"tree_function not defined for {self.__class__.__name__}")
         function_instance = self.tree_function()
         for parameter in self.exposed_parameters:
             setattr(function_instance, parameter, getattr(self, parameter))
@@ -120,6 +122,8 @@ class MtreePropertyNode(MtreeNode):
     property_type = None  # tree Property type, as defined in m_tree. Should be overriden
 
     def get_property(self):
+        if self.property_type is None:
+            raise ValueError(f"property_type not defined for {self.__class__.__name__}")
         property = self.property_type()
         for input_socket in self.inputs:
             if input_socket.is_property:
