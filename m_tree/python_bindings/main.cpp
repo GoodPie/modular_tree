@@ -101,6 +101,7 @@ PYBIND11_MODULE(m_tree, m) {
     py::class_<GrowthFunction, std::shared_ptr<GrowthFunction>, TreeFunction>(m, "GrowthFunction")
         .def(py::init<>())
         .def_readwrite("iterations", &GrowthFunction::iterations)
+        .def_readwrite("preview_iteration", &GrowthFunction::preview_iteration)
         .def_readwrite("apical_dominance", &GrowthFunction::apical_dominance)
         .def_readwrite("grow_threshold", &GrowthFunction::grow_threshold)
         .def_readwrite("cut_threshold", &GrowthFunction::cut_threshold)
@@ -117,6 +118,9 @@ PYBIND11_MODULE(m_tree, m) {
         .def_readwrite("lateral_density", &GrowthFunction::lateral_density)
         .def_readwrite("lateral_activation", &GrowthFunction::lateral_activation)
         .def_readwrite("lateral_angle", &GrowthFunction::lateral_angle)
+        // Flowering parameters
+        .def_readwrite("enable_flowering", &GrowthFunction::enable_flowering)
+        .def_readwrite("flower_threshold", &GrowthFunction::flower_threshold)
         ;
 
 

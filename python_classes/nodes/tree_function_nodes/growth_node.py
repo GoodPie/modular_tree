@@ -8,7 +8,7 @@ from ...m_tree_wrapper import lazy_m_tree
 from ..base_types.node import MtreeFunctionNode
 
 # Parameter groupings for organized UI
-BASIC_PARAMS = ["seed", "iterations", "branch_length"]
+BASIC_PARAMS = ["seed", "iterations", "preview_iteration", "branch_length"]
 GROWTH_PARAMS = ["apical_dominance", "grow_threshold", "cut_threshold"]
 SPLIT_PARAMS = ["split_threshold", "split_angle"]
 PHYSICS_PARAMS = ["gravitropism", "gravity_strength", "randomness"]
@@ -20,11 +20,13 @@ LATERAL_PARAMS = [
     "lateral_activation",
     "lateral_angle",
 ]
+FLOWER_PARAMS = ["enable_flowering", "flower_threshold"]
 
 # Parameter descriptions for tooltips
 PARAM_DESCRIPTIONS = {
     "seed": "Random seed for reproducible results",
     "iterations": "Number of growth cycles (years of growth)",
+    "preview_iteration": "Preview growth at this iteration (-1 for all)",
     "branch_length": "Length of each branch segment",
     "apical_dominance": "How much the main leader suppresses side branches (0=equal, 1=dominant)",
     "grow_threshold": "Minimum vigor for a meristem to grow",
@@ -41,6 +43,9 @@ PARAM_DESCRIPTIONS = {
     "lateral_density": "Potential branch points per unit length",
     "lateral_activation": "Vigor threshold to activate dormant buds",
     "lateral_angle": "Initial angle of lateral branches from parent",
+    # Flowering
+    "enable_flowering": "Create flower attachment points at low-vigor tips",
+    "flower_threshold": "Vigor below which meristems become flower points",
 }
 
 
@@ -56,6 +61,7 @@ class GrowthNode(bpy.types.Node, MtreeFunctionNode):
     show_split: bpy.props.BoolProperty(name="Splitting", default=False)
     show_physics: bpy.props.BoolProperty(name="Physics", default=False)
     show_lateral: bpy.props.BoolProperty(name="Lateral Branching", default=True)
+    show_flowering: bpy.props.BoolProperty(name="Flowering", default=False)
 
     @property
     def tree_function(self):
@@ -80,6 +86,14 @@ class GrowthNode(bpy.types.Node, MtreeFunctionNode):
             property_name="iterations",
             property_value=5,
             description=PARAM_DESCRIPTIONS["iterations"],
+        )
+        self.add_input(
+            "mt_IntSocket",
+            "Preview Iteration",
+            min_value=-1,
+            property_name="preview_iteration",
+            property_value=-1,
+            description=PARAM_DESCRIPTIONS["preview_iteration"],
         )
         self.add_input(
             "mt_FloatSocket",
@@ -216,6 +230,24 @@ class GrowthNode(bpy.types.Node, MtreeFunctionNode):
             description=PARAM_DESCRIPTIONS["lateral_angle"],
         )
 
+        # Flowering
+        self.add_input(
+            "mt_BoolSocket",
+            "Enable Flowering",
+            property_name="enable_flowering",
+            property_value=False,
+            description=PARAM_DESCRIPTIONS["enable_flowering"],
+        )
+        self.add_input(
+            "mt_FloatSocket",
+            "Flower Threshold",
+            min_value=0,
+            max_value=1,
+            property_name="flower_threshold",
+            property_value=0.4,
+            description=PARAM_DESCRIPTIONS["flower_threshold"],
+        )
+
         self.add_output("mt_TreeSocket", "Tree", is_property=False)
 
     def _get_socket_by_property(self, property_name: str):
@@ -288,3 +320,4 @@ class GrowthNode(bpy.types.Node, MtreeFunctionNode):
         self._draw_section(layout, "Splitting", "show_split", SPLIT_PARAMS)
         self._draw_section(layout, "Physics", "show_physics", PHYSICS_PARAMS)
         self._draw_section(layout, "Lateral Branching", "show_lateral", LATERAL_PARAMS)
+        self._draw_section(layout, "Flowering", "show_flowering", FLOWER_PARAMS)
