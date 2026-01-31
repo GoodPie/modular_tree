@@ -11,6 +11,7 @@
 #include "source/tree_functions/base_types/Property.hpp"
 #include "source/tree_functions/TrunkFunction.hpp"
 #include "source/tree_functions/BranchFunction.hpp"
+#include "source/tree_functions/CrownShape.hpp"
 #include "source/tree_functions/GrowthFunction.hpp"
 #include "source/tree_functions/PipeRadiusFunction.hpp"
 #include "source/meshers/splines_mesher/BasicMesher.hpp"
@@ -22,6 +23,16 @@ namespace py = pybind11;
 
 
 PYBIND11_MODULE(m_tree, m) {
+
+    py::enum_<CrownShape>(m, "CrownShape")
+        .value("Conical", CrownShape::Conical)
+        .value("Spherical", CrownShape::Spherical)
+        .value("Hemispherical", CrownShape::Hemispherical)
+        .value("Cylindrical", CrownShape::Cylindrical)
+        .value("TaperedCylindrical", CrownShape::TaperedCylindrical)
+        .value("Flame", CrownShape::Flame)
+        .value("InverseConical", CrownShape::InverseConical)
+        .value("TendFlame", CrownShape::TendFlame);
 
     py::class_<TreeFunction, std::shared_ptr<TreeFunction>>(m, "TreeFunction")
         .def_readwrite("seed", &TreeFunction::seed)
@@ -96,6 +107,9 @@ PYBIND11_MODULE(m_tree, m) {
         .def_readwrite("start_angle", &BranchFunction::start_angle)
         .def_readwrite("split_angle", &BranchFunction::split_angle)
         .def_readwrite("split_proba", &BranchFunction::split_proba)
+        .def_readwrite("crown_shape", &BranchFunction::crown_shape)
+        .def_readwrite("crown_base_size", &BranchFunction::crown_base_size)
+        .def_readwrite("crown_height", &BranchFunction::crown_height)
         ;
 
     py::class_<GrowthFunction, std::shared_ptr<GrowthFunction>, TreeFunction>(m, "GrowthFunction")
