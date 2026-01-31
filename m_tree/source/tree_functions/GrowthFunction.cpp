@@ -17,9 +17,8 @@ void setup_growth_information_rec(Node& node, bool suppress_tip_growth)
 	BioNodeInfo::NodeType tip_type =
 	    suppress_tip_growth ? BioNodeInfo::NodeType::Ignored : BioNodeInfo::NodeType::Meristem;
 
-	node.growthInfo =
-	    std::make_unique<BioNodeInfo>(node.children.size() == 0 ? tip_type
-	                                                            : BioNodeInfo::NodeType::Ignored);
+	node.growthInfo = std::make_unique<BioNodeInfo>(
+	    node.children.size() == 0 ? tip_type : BioNodeInfo::NodeType::Ignored);
 	for (auto& child : node.children)
 		setup_growth_information_rec(child->node, suppress_tip_growth);
 }
@@ -36,8 +35,8 @@ float GrowthFunction::update_vigor_ratio_rec(Node& node)
 	else if (info.type == BioNodeInfo::NodeType::Dormant)
 	{
 		// Dormant buds request less energy (suppressed by apical dominance)
-		info.vigor_ratio = 0.3f;
-		return 0.3f;
+		info.vigor_ratio = GrowthConstants::kDormantBudEnergyRequest;
+		return GrowthConstants::kDormantBudEnergyRequest;
 	}
 	else if (info.type == BioNodeInfo::NodeType::Branch ||
 	         info.type == BioNodeInfo::NodeType::Ignored)
@@ -54,7 +53,8 @@ float GrowthFunction::update_vigor_ratio_rec(Node& node)
 		{
 			float child_flux = update_vigor_ratio_rec(node.children[i]->node);
 			float t = apical_dominance;
-			vigor_ratio = (t * light_flux) / (t * light_flux + (1 - t) * child_flux + .001f);
+			vigor_ratio = (t * light_flux) /
+			              (t * light_flux + (1 - t) * child_flux + GrowthConstants::kEpsilon);
 			static_cast<BioNodeInfo*>(node.children[i]->node.growthInfo.get())->vigor_ratio =
 			    1 - vigor_ratio;
 			light_flux += child_flux;
@@ -80,10 +80,12 @@ void GrowthFunction::update_vigor_rec(Node& node, float vigor)
 		BioNodeInfo* child_info = static_cast<BioNodeInfo*>(child->node.growthInfo.get());
 		float child_vigor = child_info->vigor_ratio * vigor;
 
-		// Give dormant buds a fixed proportion of parent vigor (bypasses competitive apical dominance)
+		// Give dormant buds a fixed proportion of parent vigor (bypasses competitive apical
+		// dominance)
 		if (child_info->type == BioNodeInfo::NodeType::Dormant)
 		{
-			child_vigor = vigor * (1.0f - apical_dominance) * 0.5f;
+			child_vigor =
+			    vigor * (1.0f - apical_dominance) * GrowthConstants::kDormantBudVigorFactor;
 		}
 
 		update_vigor_rec(child->node, child_vigor);
@@ -106,21 +108,17 @@ void GrowthFunction::simulate_growth_rec(Node& node, int id)
 	}
 
 	// Newly activated buds always grow (skip grow_threshold check)
-	bool primary_growth =
-	    info.type == BioNodeInfo::NodeType::Meristem &&
-	    (activate_dormant || info.vigor > grow_threshold);
+	bool primary_growth = info.type == BioNodeInfo::NodeType::Meristem &&
+	                      (activate_dormant || info.vigor > grow_threshold);
 	bool secondary_growth =
-	    info.vigor > grow_threshold &&
-	    info.type != BioNodeInfo::NodeType::Ignored &&
+	    info.vigor > grow_threshold && info.type != BioNodeInfo::NodeType::Ignored &&
 	    info.type != BioNodeInfo::NodeType::Dormant; // Dormant buds don't get secondary growth
 	bool split = info.type == BioNodeInfo::NodeType::Meristem && info.vigor > split_threshold;
-	bool cut = info.type == BioNodeInfo::NodeType::Meristem && info.vigor < cut_threshold;
+	bool cut = info.type == BioNodeInfo::NodeType::Meristem && info.vigor < current_cut_threshold_;
 
 	// Flower check - vigor low but above cut threshold
-	bool become_flower = enable_flowering &&
-	    info.type == BioNodeInfo::NodeType::Meristem &&
-	    info.vigor < flower_threshold &&
-	    info.vigor >= cut_threshold;
+	bool become_flower = enable_flowering && info.type == BioNodeInfo::NodeType::Meristem &&
+	                     info.vigor < flower_threshold && info.vigor >= current_cut_threshold_;
 
 	int child_count = node.children.size();
 	if (cut)
@@ -145,7 +143,7 @@ void GrowthFunction::simulate_growth_rec(Node& node, int id)
 		Vector3 child_direction =
 		    node.direction + Vector3{0, 0, 1} * gravitropism + Geometry::random_vec() * randomness;
 		child_direction.normalize();
-		float child_radius = node.radius * 0.95f;  // Taper branches as they extend
+		float child_radius = node.radius * GrowthConstants::kExtensionTaper;
 		float child_length = branch_length * (info.vigor + .1f);
 		NodeChild child =
 		    NodeChild{Node{child_direction, node.tangent, branch_length, child_radius, id}, 1};
@@ -163,7 +161,7 @@ void GrowthFunction::simulate_growth_rec(Node& node, int id)
 		tangent = Geometry::get_look_at_rot(node.direction) * tangent;
 		Vector3 child_direction = Geometry::lerp(node.direction, tangent, split_angle / 90);
 		child_direction.normalize();
-		float child_radius = node.radius * 0.9f;  // Split branches taper more
+		float child_radius = node.radius * GrowthConstants::kSplitTaper;
 		float child_length = branch_length * (info.vigor + .1f);
 		NodeChild child =
 		    NodeChild{Node{child_direction, node.tangent, branch_length, child_radius, id}, 1};
@@ -211,7 +209,8 @@ void GrowthFunction::apply_gravity_rec(Node& node, Eigen::Matrix3f curent_rotati
 		float lever_arm = offset.norm();
 		float torque = info.branch_weight * lever_arm;
 		float bendiness = std::exp(-(info.age / 2 + info.vigor));
-		float angle = torque * bendiness * gravity_strength * 50;
+		float angle =
+		    torque * bendiness * gravity_strength * GrowthConstants::kGravityAngleMultiplier;
 		Vector3 tangent = node.direction.cross(Vector3{0, 0, -1});
 		Eigen::Matrix3f rot;
 		rot = Eigen::AngleAxis<float>(angle, tangent);
@@ -238,7 +237,8 @@ void GrowthFunction::update_absolute_position_rec(Node& node, const Vector3& nod
 
 // Create dormant lateral buds along Ignored nodes
 void GrowthFunction::create_lateral_buds_rec(Node& node, int id, Vector3 pos, float& dist_to_next,
-                                             float& current_length, float total_length, float& philo)
+                                             float& current_length, float total_length,
+                                             float& philo)
 {
 	BioNodeInfo& info = static_cast<BioNodeInfo&>(*node.growthInfo);
 
@@ -247,7 +247,7 @@ void GrowthFunction::create_lateral_buds_rec(Node& node, int id, Vector3 pos, fl
 	{
 		float absolute_start = lateral_start * total_length;
 		float absolute_end = lateral_end * total_length;
-		float bud_spacing = 1.0f / (lateral_density + 0.001f);
+		float bud_spacing = 1.0f / (lateral_density + GrowthConstants::kEpsilon);
 
 		// Process this node segment
 		if (current_length + node.length >= absolute_start && current_length < absolute_end)
@@ -274,11 +274,12 @@ void GrowthFunction::create_lateral_buds_rec(Node& node, int id, Vector3 pos, fl
 				philo += philotaxis_angle;
 				Vector3 tangent{std::cos(philo), std::sin(philo), 0};
 				tangent = Geometry::get_look_at_rot(node.direction) * tangent;
-				Vector3 bud_direction = Geometry::lerp(node.direction, tangent, lateral_angle / 90.0f);
+				Vector3 bud_direction =
+				    Geometry::lerp(node.direction, tangent, lateral_angle / 90.0f);
 				bud_direction.normalize();
 
 				float position_in_parent = pos_in_node / node.length;
-				float child_radius = node.radius * 0.8f;  // Inherit most of parent radius for natural connection
+				float child_radius = node.radius * GrowthConstants::kLateralRadiusRatio;
 				float child_length = branch_length * 0.5f;
 
 				NodeChild child{Node{bud_direction, node.tangent, child_length, child_radius, id},
@@ -335,25 +336,30 @@ void GrowthFunction::execute(std::vector<Stem>& stems, int id, int parent_id)
 
 	// Determine effective iterations - use preview_iteration if valid, otherwise run all
 	size_t effective_iterations = (preview_iteration >= 0 && preview_iteration < iterations)
-	    ? static_cast<size_t>(preview_iteration) : static_cast<size_t>(iterations);
+	                                  ? static_cast<size_t>(preview_iteration)
+	                                  : static_cast<size_t>(iterations);
 
-	for (size_t i = 0; i < effective_iterations; i++) // an iteration can be seen as a year of growth
+	// Reset working threshold at start of execution to ensure reproducibility
+	// Same parameters will always produce same results
+	current_cut_threshold_ = cut_threshold;
+
+	for (size_t i = 0; i < effective_iterations;
+	     i++) // an iteration can be seen as a year of growth
 	{
 		for (Stem& stem : stems) // the energy is not shared between stems
 		{
 			float target_light_flux = 1 + std::pow((float)i, 1.5);
 			float light_flux = update_vigor_ratio_rec(stem.node); // get total available energy
 
+			// Adapt working threshold based on light flux ratio
 			if (target_light_flux > light_flux)
 			{
-				cut_threshold -= .1f;
-				// grow_threshold -= .1f
+				current_cut_threshold_ -= GrowthConstants::kThresholdAdjustmentStep;
 			}
 			else if (target_light_flux < light_flux)
 			{
-				cut_threshold += .1f;
+				current_cut_threshold_ += GrowthConstants::kThresholdAdjustmentStep;
 			}
-			// cut_threshold = (light_flux / target_light_flux) / 2;
 
 			update_vigor_rec(stem.node, target_light_flux); // distribute the energy in each node
 			simulate_growth_rec(stem.node, id);             // apply rules to the tree

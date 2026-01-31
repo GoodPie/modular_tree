@@ -45,7 +45,7 @@ PARAM_DESCRIPTIONS = {
     "lateral_angle": "Initial angle of lateral branches from parent",
     # Flowering
     "enable_flowering": "Create flower attachment points at low-vigor tips",
-    "flower_threshold": "Vigor below which meristems become flower points",
+    "flower_threshold": "Vigor below which meristems become flower points (must be > cut threshold)",
 }
 
 
@@ -63,9 +63,32 @@ class GrowthNode(bpy.types.Node, MtreeFunctionNode):
     show_lateral: bpy.props.BoolProperty(name="Lateral Branching", default=True)
     show_flowering: bpy.props.BoolProperty(name="Flowering", default=False)
 
+    # Minimum gap between cut_threshold and flower_threshold for flowering to work
+    THRESHOLD_GAP = 0.05
+
     @property
     def tree_function(self):
         return lazy_m_tree.GrowthFunction
+
+    def construct_function(self):
+        """Override to validate threshold constraints before constructing the C++ function."""
+        # Get current values from sockets
+        cut_socket = self._get_socket_by_property("cut_threshold")
+        flower_socket = self._get_socket_by_property("flower_threshold")
+        flowering_socket = self._get_socket_by_property("enable_flowering")
+
+        if cut_socket and flower_socket and flowering_socket:
+            cut_val = cut_socket.property_value
+            flower_val = flower_socket.property_value
+            flowering_enabled = flowering_socket.property_value
+
+            # Validate: flower_threshold must be > cut_threshold for flowering to work
+            if flowering_enabled and flower_val <= cut_val:
+                # Adjust flower_threshold to be above cut_threshold
+                flower_socket.property_value = cut_val + self.THRESHOLD_GAP
+
+        # Call parent implementation
+        return super().construct_function()
 
     def init(self, context):
         self.add_input("mt_TreeSocket", "Tree", is_property=False)
