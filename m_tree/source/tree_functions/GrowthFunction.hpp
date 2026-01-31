@@ -71,12 +71,14 @@ class BioNodeInfo : public GrowthInfo
 	float vigor = 0;
 	int age = 0;
 	float philotaxis_angle = 0;
+	bool is_lateral = false;  // Track if this branch originated from a lateral bud
 
-	BioNodeInfo(NodeType type, int age = 0, float philotaxis_angle = 0)
+	BioNodeInfo(NodeType type, int age = 0, float philotaxis_angle = 0, bool is_lateral = false)
 	{
 		this->type = type;
 		this->age = age;
 		this->philotaxis_angle = philotaxis_angle;
+		this->is_lateral = is_lateral;
 	};
 };
 
