@@ -120,8 +120,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    env:
-      STATUS: ${{ !endsWith(github.ref, 'master') && 'alpha' || '' }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/download-artifact@v7
@@ -141,6 +139,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           files: release/*.zip
-          name: Release V${{ steps.vars.outputs.version }}${{ env.STATUS }}
-          tag_name: ${{ steps.vars.outputs.version }}${{ env.STATUS }}
+          name: Release V${{ steps.vars.outputs.version }}
+          tag_name: ${{ steps.vars.outputs.version }}
           body: V${{ steps.vars.outputs.version }}
+          prerelease: ${{ !endsWith(github.ref, 'master') }}
