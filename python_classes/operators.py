@@ -72,7 +72,9 @@ class QuickGenerateTree(bpy.types.Operator):
             self._create_blender_object(context, cpp_mesh, f"Tree_{seed}")
 
             if self.add_leaves:
-                distribute_leaves(context.view_layer.objects.active)
+                active_obj = context.view_layer.objects.active
+                if active_obj is not None:
+                    distribute_leaves(active_obj)
 
             elapsed = time.time() - start_time
             self.report({"INFO"}, f"Generated tree (seed={seed}) in {elapsed:.2f}s")
@@ -153,8 +155,13 @@ class ExportPivotPainter(bpy.types.Operator):
             self.report({"ERROR"}, "Invalid mesh object")
             return {"CANCELLED"}
 
+        mesh_data = obj.data
+        if not isinstance(mesh_data, bpy.types.Mesh):
+            self.report({"ERROR"}, "Object data is not a mesh")
+            return {"CANCELLED"}
+
         exporter = PivotPainterExporter(
-            mesh=obj.data,
+            mesh=mesh_data,
             export_format=ExportFormat[self.export_format],
             texture_size=self.texture_size,
             export_path=self.export_path,

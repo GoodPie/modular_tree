@@ -12,12 +12,12 @@ wheels = [
 ]
 
 [[package]]
-name = "fake-bpy-module-latest"
-version = "20260131"
+name = "fake-bpy-module-4-3"
+version = "20260128"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/71/75/be0755f2b51d68472fff23ea813182c6eb8270ddb77537dcb025f4eec457/fake_bpy_module_latest-20260131.tar.gz", hash = "sha256:232a9a4c16853e32151ef8829a8cc8a206224a79fd3127fe5b672ebb238e551b", size = 909490, upload-time = "2026-01-31T06:27:29.619Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0d/ff/0b859d8ef1cf882c0cd7e93340ee918d1a3a9e3c00a10d65e411f17c2e77/fake_bpy_module_4_3-20260128.tar.gz", hash = "sha256:df6ccd50d4438b71cdc3473e90505602c03e40993879f7d20bade0871ed8f15d", size = 847951, upload-time = "2026-01-28T15:38:18.423Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/06/d7/286a33b30473ea064587c8aa4eb227f41672fdac0896a8dfd915c048f400/fake_bpy_module_latest-20260131-py3-none-any.whl", hash = "sha256:de98eef51c1cab18557da11089c55ac2375a4ab7601e00a23af90258f19395fa", size = 1040467, upload-time = "2026-01-31T06:27:27.637Z" },
+    { url = "https://files.pythonhosted.org/packages/fd/30/f36a2f62c1195eabff5d9eefbfb2229219b9108f4254d4ba8e7d515090c9/fake_bpy_module_4_3-20260128-py3-none-any.whl", hash = "sha256:4eb5798cf0ed597fa2a43b6d83701fdc7b7d071e9cef38406f04af0936af9b46", size = 969732, upload-time = "2026-01-28T15:38:08.539Z" },
 ]
 
 [[package]]
@@ -36,8 +36,9 @@ source = { virtual = "." }
 
 [package.dev-dependencies]
 dev = [
-    { name = "fake-bpy-module-latest" },
+    { name = "fake-bpy-module-4-3" },
     { name = "numpy" },
+    { name = "pyright" },
     { name = "pytest" },
 ]
 
@@ -45,9 +46,19 @@ dev = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "fake-bpy-module-latest", specifier = ">=20260131" },
+    { name = "fake-bpy-module-4-3", specifier = ">=20260128" },
     { name = "numpy", specifier = ">=1.24" },
+    { name = "pyright", specifier = ">=1.1" },
     { name = "pytest", specifier = ">=8.0" },
+]
+
+[[package]]
+name = "nodeenv"
+version = "1.10.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/24/bf/d1bda4f6168e0b2e9e5958945e01910052158313224ada5ce1fb2e1113b8/nodeenv-1.10.0.tar.gz", hash = "sha256:996c191ad80897d076bdfba80a41994c2b47c68e224c542b48feba42ba00f8bb", size = 55611, upload-time = "2025-12-20T14:08:54.006Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/88/b2/d0896bdcdc8d28a7fc5717c305f1a861c26e18c05047949fb371034d98bd/nodeenv-1.10.0-py2.py3-none-any.whl", hash = "sha256:5bb13e3eed2923615535339b3c620e76779af4cb4c6a90deccc9e36b274d3827", size = 23438, upload-time = "2025-12-20T14:08:52.782Z" },
 ]
 
 [[package]]
@@ -157,6 +168,19 @@ wheels = [
 ]
 
 [[package]]
+name = "pyright"
+version = "1.1.408"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "nodeenv" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/74/b2/5db700e52554b8f025faa9c3c624c59f1f6c8841ba81ab97641b54322f16/pyright-1.1.408.tar.gz", hash = "sha256:f28f2321f96852fa50b5829ea492f6adb0e6954568d1caa3f3af3a5f555eb684", size = 4400578, upload-time = "2026-01-08T08:07:38.795Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0c/82/a2c93e32800940d9573fb28c346772a14778b84ba7524e691b324620ab89/pyright-1.1.408-py3-none-any.whl", hash = "sha256:090b32865f4fdb1e0e6cd82bf5618480d48eecd2eb2e70f960982a3d9a4c17c1", size = 6399144, upload-time = "2026-01-08T08:07:37.082Z" },
+]
+
+[[package]]
 name = "pytest"
 version = "9.0.2"
 source = { registry = "https://pypi.org/simple" }
@@ -170,4 +194,13 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/d1/db/7ef3487e0fb0049ddb5ce41d3a49c235bf9ad299b6a25d5780a89f19230f/pytest-9.0.2.tar.gz", hash = "sha256:75186651a92bd89611d1d9fc20f0b4345fd827c41ccd5c299a868a05d70edf11", size = 1568901, upload-time = "2025-12-06T21:30:51.014Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3b/ab/b3226f0bd7cdcf710fbede2b3548584366da3b19b5021e74f5bde2a8fa3f/pytest-9.0.2-py3-none-any.whl", hash = "sha256:711ffd45bf766d5264d487b917733b453d917afd2b0ad65223959f59089f875b", size = 374801, upload-time = "2025-12-06T21:30:49.154Z" },
+]
+
+[[package]]
+name = "typing-extensions"
+version = "4.15.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/72/94/1a15dd82efb362ac84269196e94cf00f187f7ed21c242792a923cdb1c61f/typing_extensions-4.15.0.tar.gz", hash = "sha256:0cea48d173cc12fa28ecabc3b837ea3cf6f38c6d1136f85cbaaf598984861466", size = 109391, upload-time = "2025-08-25T13:49:26.313Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/18/67/36e9267722cc04a6b9f15c7f3441c2363321a3ea07da7ae0c0707beb2a9c/typing_extensions-4.15.0-py3-none-any.whl", hash = "sha256:f0fa19c6845758ab08074a0cfa8b7aecb71c999ca73d62883bc25cc018c4e548", size = 44614, upload-time = "2025-08-25T13:49:24.86Z" },
 ]

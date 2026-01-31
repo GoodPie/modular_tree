@@ -7,7 +7,8 @@ requires-python = ">=3.11"
 dev = [
     "pytest>=8.0",
     "numpy>=1.24",
-    "fake-bpy-module-latest>=20260131",
+    "fake-bpy-module-4-3>=20260128",
+    "pyright>=1.1",
 ]
 
 [tool.ruff]
@@ -30,3 +31,14 @@ quote-style = "double"
 # NOTE: pytest configuration is in tests/pytest.ini to avoid importing
 # the root __init__.py (Blender addon entry point that imports bpy).
 # Run tests with: cd tests && pytest unit -v
+
+[tool.pyright]
+pythonVersion = "3.11"
+typeCheckingMode = "basic"
+extraPaths = ["python_classes"]
+exclude = ["m_tree/dependencies", "**/__pycache__"]
+# Blender-specific relaxations - the property system and stubs have gaps
+reportInvalidTypeForm = false
+reportAttributeAccessIssue = "warning"
+reportOptionalMemberAccess = "warning"
+reportCallIssue = "warning"  # NodeCategory/NodeItem stubs are incomplete

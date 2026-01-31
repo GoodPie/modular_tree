@@ -143,7 +143,7 @@ def create_leaves_distribution_node_group() -> NodeTree:
 
     # Create new node group with versioned name
     node_group_name = f"MTree_Leaves_Distribution_v{NODE_GROUP_VERSION}"
-    ng = bpy.data.node_groups.new(node_group_name, "GeometryNodeTree")
+    ng = bpy.data.node_groups.new(node_group_name, "GeometryNodeTree")  # type: ignore[arg-type]
 
     # Create interface sockets (inputs and outputs)
     # Input: Geometry (tree mesh)

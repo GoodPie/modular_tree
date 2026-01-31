@@ -22,7 +22,7 @@ class MtreePropertySocket(bpy.types.NodeSocket, MtreeSocket):
     property_value: bpy.props.FloatProperty(default=0, update=update_value)
 
     def get_property(self):
-        if self.is_linked:
+        if self.is_linked and self.links:
             property = self.links[0].from_node.get_property()
             return lazy_m_tree.PropertyWrapper(property)
         else:
