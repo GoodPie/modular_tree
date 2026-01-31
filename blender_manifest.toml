@@ -2,7 +2,7 @@ schema_version = "1.0.0"
 
 id = "modular_tree"
 name = "Modular Tree"
-version = "5.1.4"
+version = "5.1.5"
 website = "https://github.com/GoodPie/modular_tree"
 tagline = "Procedural node based 3D tree generation"
 maintainer = "GoodPie <brandynbb96@gmail.com>"
