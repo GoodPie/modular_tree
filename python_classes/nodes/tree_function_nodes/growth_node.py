@@ -12,6 +12,14 @@ BASIC_PARAMS = ["seed", "iterations", "branch_length"]
 GROWTH_PARAMS = ["apical_dominance", "grow_threshold", "cut_threshold"]
 SPLIT_PARAMS = ["split_threshold", "split_angle"]
 PHYSICS_PARAMS = ["gravitropism", "gravity_strength", "randomness"]
+LATERAL_PARAMS = [
+    "enable_lateral_branching",
+    "lateral_start",
+    "lateral_end",
+    "lateral_density",
+    "lateral_activation",
+    "lateral_angle",
+]
 
 # Parameter descriptions for tooltips
 PARAM_DESCRIPTIONS = {
@@ -26,6 +34,13 @@ PARAM_DESCRIPTIONS = {
     "gravitropism": "Tendency to grow upward (negative=downward)",
     "gravity_strength": "How much branches bend under their weight",
     "randomness": "Random variation in branch direction",
+    # Lateral branching
+    "enable_lateral_branching": "Enable branches along parent stems (not just from tips)",
+    "lateral_start": "Start position for lateral buds (0=base, 1=tip)",
+    "lateral_end": "End position for lateral buds (0=base, 1=tip)",
+    "lateral_density": "Potential branch points per unit length",
+    "lateral_activation": "Vigor threshold to activate dormant buds",
+    "lateral_angle": "Initial angle of lateral branches from parent",
 }
 
 
@@ -40,6 +55,7 @@ class GrowthNode(bpy.types.Node, MtreeFunctionNode):
     show_growth: bpy.props.BoolProperty(name="Growth Control", default=True)
     show_split: bpy.props.BoolProperty(name="Splitting", default=False)
     show_physics: bpy.props.BoolProperty(name="Physics", default=False)
+    show_lateral: bpy.props.BoolProperty(name="Lateral Branching", default=True)
 
     @property
     def tree_function(self):
@@ -147,6 +163,59 @@ class GrowthNode(bpy.types.Node, MtreeFunctionNode):
             description=PARAM_DESCRIPTIONS["randomness"],
         )
 
+        # Lateral branching
+        self.add_input(
+            "mt_BoolSocket",
+            "Enable Lateral Branching",
+            property_name="enable_lateral_branching",
+            property_value=True,
+            description=PARAM_DESCRIPTIONS["enable_lateral_branching"],
+        )
+        self.add_input(
+            "mt_FloatSocket",
+            "Lateral Start",
+            min_value=0,
+            max_value=1,
+            property_name="lateral_start",
+            property_value=0.1,
+            description=PARAM_DESCRIPTIONS["lateral_start"],
+        )
+        self.add_input(
+            "mt_FloatSocket",
+            "Lateral End",
+            min_value=0,
+            max_value=1,
+            property_name="lateral_end",
+            property_value=0.9,
+            description=PARAM_DESCRIPTIONS["lateral_end"],
+        )
+        self.add_input(
+            "mt_FloatSocket",
+            "Lateral Density",
+            min_value=0.1,
+            property_name="lateral_density",
+            property_value=2.0,
+            description=PARAM_DESCRIPTIONS["lateral_density"],
+        )
+        self.add_input(
+            "mt_FloatSocket",
+            "Lateral Activation",
+            min_value=0,
+            max_value=1,
+            property_name="lateral_activation",
+            property_value=0.4,
+            description=PARAM_DESCRIPTIONS["lateral_activation"],
+        )
+        self.add_input(
+            "mt_FloatSocket",
+            "Lateral Angle",
+            min_value=0,
+            max_value=90,
+            property_name="lateral_angle",
+            property_value=45,
+            description=PARAM_DESCRIPTIONS["lateral_angle"],
+        )
+
         self.add_output("mt_TreeSocket", "Tree", is_property=False)
 
     def _get_socket_by_property(self, property_name: str):
@@ -218,3 +287,4 @@ class GrowthNode(bpy.types.Node, MtreeFunctionNode):
         self._draw_section(layout, "Growth Control", "show_growth", GROWTH_PARAMS)
         self._draw_section(layout, "Splitting", "show_split", SPLIT_PARAMS)
         self._draw_section(layout, "Physics", "show_physics", PHYSICS_PARAMS)
+        self._draw_section(layout, "Lateral Branching", "show_lateral", LATERAL_PARAMS)
