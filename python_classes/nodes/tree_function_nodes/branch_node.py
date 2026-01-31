@@ -64,6 +64,14 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
         description="Crown shape envelope that controls branch length based on height",
     )
 
+    angle_variation: bpy.props.FloatProperty(
+        name="Angle Spread",
+        default=0.0,
+        min=-45.0,
+        max=45.0,
+        description="Height-based angle variation: positive = upward at top, downward at base",
+    )
+
     @property
     def tree_function(self):
         return lazy_m_tree.BranchFunction
@@ -84,7 +92,8 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
             "INVERSE_CONICAL": lazy_m_tree.CrownShape.InverseConical,
             "TEND_FLAME": lazy_m_tree.CrownShape.TendFlame,
         }
-        func.crown_shape = shape_map.get(self.crown_shape, lazy_m_tree.CrownShape.Cylindrical)
+        func.crown.shape = shape_map.get(self.crown_shape, lazy_m_tree.CrownShape.Cylindrical)
+        func.crown.angle_variation = self.angle_variation
         return func
 
     def init(self, context):
@@ -330,6 +339,7 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
 
         if show:
             box.prop(self, "crown_shape", text="")
-            box.label(text="Controls branch length based on height", icon="INFO")
+            box.prop(self, "crown_angle_spread", text="Angle Spread")
+            box.label(text="Controls branch length and angle based on height", icon="INFO")
 
         self._draw_section(layout, "Advanced", "show_advanced", ADVANCED_PARAMS)
