@@ -77,7 +77,7 @@ void GrowthFunction::simulate_growth_rec(Node& node, int id)
 	bool split = info.type == BioNodeInfo::NodeType::Meristem && info.vigor > split_threshold;
 	bool cut = info.type == BioNodeInfo::NodeType::Meristem && info.vigor < cut_threshold;
 	int child_count = node.children.size();
-	if (cut && false)
+	if (cut)
 	{
 		info.type = BioNodeInfo::NodeType::Cut;
 		return;
@@ -149,17 +149,22 @@ void GrowthFunction::get_weight_rec(Node& node)
 void GrowthFunction::apply_gravity_rec(Node& node, Eigen::Matrix3f curent_rotation)
 {
 	BioNodeInfo& info = static_cast<BioNodeInfo&>(*node.growthInfo);
-	Vector3 offset = (info.center_of_mass - info.absolute_position);
-	offset[2] = 0;
-	float lever_arm = offset.norm();
-	float torque = info.branch_weight * lever_arm;
-	float bendiness = std::exp(-(info.age / 2 + info.vigor));
-	float angle = torque * bendiness * gravity_strength * 50;
-	Vector3 tangent = node.direction.cross(Vector3{0, 0, -1});
-	Eigen::Matrix3f rot;
-	rot = Eigen::AngleAxis<float>(angle, tangent);
-	curent_rotation = curent_rotation * rot;
-	node.direction = curent_rotation * node.direction;
+
+	// Only apply gravity bending to growth nodes, not the original trunk
+	if (info.type != BioNodeInfo::NodeType::Ignored)
+	{
+		Vector3 offset = (info.center_of_mass - info.absolute_position);
+		offset[2] = 0;
+		float lever_arm = offset.norm();
+		float torque = info.branch_weight * lever_arm;
+		float bendiness = std::exp(-(info.age / 2 + info.vigor));
+		float angle = torque * bendiness * gravity_strength * 50;
+		Vector3 tangent = node.direction.cross(Vector3{0, 0, -1});
+		Eigen::Matrix3f rot;
+		rot = Eigen::AngleAxis<float>(angle, tangent);
+		curent_rotation = curent_rotation * rot;
+		node.direction = curent_rotation * node.direction;
+	}
 
 	for (auto& child : node.children)
 	{
@@ -214,5 +219,7 @@ void GrowthFunction::execute(std::vector<Stem>& stems, int id, int parent_id)
 			apply_gravity_rec(stem.node, rot);
 		}
 	}
+
+	execute_children(stems, id);
 }
 } // namespace Mtree
