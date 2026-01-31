@@ -238,6 +238,15 @@ BranchFunction::get_origins(std::vector<Stem>& stems, const int id, const int pa
 	NodeUtilities::BranchSelection selection = NodeUtilities::select_from_tree(stems, parent_id);
 	std::vector<std::reference_wrapper<Node>> origins;
 
+	// Calculate effective crown height for shape envelope
+	float effective_crown_height = crown_height;
+	if (effective_crown_height < 0 && parent_id == 0 && stems.size() > 0)
+	{
+		effective_crown_height = NodeUtilities::get_branch_length(stems[0].node);
+	}
+	float crown_start_z = effective_crown_height * crown_base_size;
+	float crown_zone_height = effective_crown_height * (1.0f - crown_base_size);
+
 	float origins_dist = 1 / (branches_density + .001); // distance between two consecutive origins
 
 	for (auto& branch : selection) // parent branches
@@ -300,6 +309,21 @@ BranchFunction::get_origins(std::vector<Stem>& stems, const int id, const int pa
 					child_direction.normalize();
 					float child_radius = node.radius * start_radius.execute(factor);
 					float branch_length = length.execute(factor);
+
+					// Apply crown shape envelope
+					if (crown_shape != CrownShape::Cylindrical && crown_zone_height > 0.001f)
+					{
+						float branch_z =
+						    (node_position + node.direction * node.length * position_in_parent).z();
+						if (branch_z >= crown_start_z)
+						{
+							float height_ratio =
+							    std::min(1.0f, (branch_z - crown_start_z) / crown_zone_height);
+							branch_length *=
+							    CrownShapeUtils::get_shape_ratio(crown_shape, height_ratio);
+						}
+					}
+
 					float node_length = std::min(branch_length, 1 / (resolution + 0.001f));
 					NodeChild child{
 					    Node{child_direction, node.tangent, node_length, child_radius, id},

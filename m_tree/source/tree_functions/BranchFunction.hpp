@@ -1,5 +1,6 @@
 #pragma once
 #include "./base_types/TreeFunction.hpp"
+#include "CrownShape.hpp"
 #include "source/tree_functions/base_types/Property.hpp"
 #include "source/utilities/GeometryUtilities.hpp"
 #include "source/utilities/NodeUtilities.hpp"
@@ -29,6 +30,11 @@ class BranchFunction : public TreeFunction
 	PropertyWrapper start_angle{ConstantProperty(45)}; // -180 < x < 180
 	float split_angle = 45.0f;
 	float split_proba = .5f; // 0 < x
+
+	// Crown shape envelope parameters
+	CrownShape crown_shape = CrownShape::Cylindrical;
+	float crown_base_size = 0.0f;
+	float crown_height = -1.0f; // -1 = auto-detect from trunk
 
 	void execute(std::vector<Stem>& stems, int id, int parent_id) override;
 
