@@ -4,7 +4,7 @@ id = "modular_tree"
 name = "Modular Tree"
 version = "5.1.2"
 website = "https://github.com/GoodPie/modular_tree"
-tagline = "Procedural 3D tree generation"
+tagline = "Procedural node based 3D tree generation"
 maintainer = "GoodPie <brandynbb96@gmail.com>"
 type = "add-on"
 
