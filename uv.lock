@@ -12,6 +12,15 @@ wheels = [
 ]
 
 [[package]]
+name = "fake-bpy-module-latest"
+version = "20260131"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/71/75/be0755f2b51d68472fff23ea813182c6eb8270ddb77537dcb025f4eec457/fake_bpy_module_latest-20260131.tar.gz", hash = "sha256:232a9a4c16853e32151ef8829a8cc8a206224a79fd3127fe5b672ebb238e551b", size = 909490, upload-time = "2026-01-31T06:27:29.619Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/06/d7/286a33b30473ea064587c8aa4eb227f41672fdac0896a8dfd915c048f400/fake_bpy_module_latest-20260131-py3-none-any.whl", hash = "sha256:de98eef51c1cab18557da11089c55ac2375a4ab7601e00a23af90258f19395fa", size = 1040467, upload-time = "2026-01-31T06:27:27.637Z" },
+]
+
+[[package]]
 name = "iniconfig"
 version = "2.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -22,11 +31,12 @@ wheels = [
 
 [[package]]
 name = "modular-tree"
-version = "5.1.2"
+version = "5.1.4"
 source = { virtual = "." }
 
 [package.dev-dependencies]
 dev = [
+    { name = "fake-bpy-module-latest" },
     { name = "numpy" },
     { name = "pytest" },
 ]
@@ -35,6 +45,7 @@ dev = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "fake-bpy-module-latest", specifier = ">=20260131" },
     { name = "numpy", specifier = ">=1.24" },
     { name = "pytest", specifier = ">=8.0" },
 ]
