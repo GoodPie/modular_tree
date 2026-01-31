@@ -72,6 +72,12 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
         description="Height-based angle variation: positive = upward at top, downward at base",
     )
 
+    show_crown_preview: bpy.props.BoolProperty(
+        name="Show Preview",
+        default=False,
+        description="Show crown shape envelope in 3D viewport",
+    )
+
     @property
     def tree_function(self):
         return lazy_m_tree.BranchFunction
@@ -389,7 +395,8 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
 
         if show:
             box.prop(self, "crown_shape", text="")
-            box.prop(self, "crown_angle_spread", text="Angle Spread")
+            box.prop(self, "show_crown_preview", text="Preview in Viewport")
+            box.prop(self, "angle_variation", text="Angle Spread")
             box.label(text="Controls branch length and angle based on height", icon="INFO")
 
         self._draw_section(layout, "Advanced", "show_advanced", ADVANCED_PARAMS)
