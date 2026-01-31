@@ -1,12 +1,13 @@
 import bpy
 from bpy.utils import register_class, unregister_class
 
+from .bool_socket import MtreeBoolSocket
 from .float_socket import MtreeFloatSocket
 from .int_socket import MtreeIntSocket
 from .property_socket import MtreePropertySocket
 from .tree_socket import TreeSocket
 
-classes = [MtreeFloatSocket, TreeSocket, MtreeIntSocket, MtreePropertySocket]
+classes = [MtreeBoolSocket, MtreeFloatSocket, TreeSocket, MtreeIntSocket, MtreePropertySocket]
 
 
 def register():

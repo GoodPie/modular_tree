@@ -27,6 +27,7 @@ class TreePreset:
     description: str
     branches: dict[str, Any] = field(default_factory=dict)
     trunk: dict[str, Any] = field(default_factory=dict)
+    growth: dict[str, Any] = field(default_factory=dict)
 
     def to_enum_item(self) -> tuple[str, str, str]:
         """Convert to Blender EnumProperty item tuple."""
@@ -200,3 +201,61 @@ def apply_trunk_preset(trunk, preset_name: str) -> None:
         if preset and preset.trunk:
             for key, value in preset.trunk.items():
                 setattr(trunk, key, value)
+
+
+# Growth function presets
+GROWTH_PRESETS: dict[str, dict] = {
+    "STRUCTURED": {
+        "iterations": 6,
+        "apical_dominance": 0.85,
+        "split_threshold": 0.8,
+        "grow_threshold": 0.4,
+        "gravitropism": 0.15,
+        "randomness": 0.05,
+    },
+    "SPREADING": {
+        "iterations": 5,
+        "apical_dominance": 0.5,
+        "split_threshold": 0.6,
+        "grow_threshold": 0.3,
+        "gravity_strength": 1.5,
+    },
+    "WEEPING": {
+        "iterations": 7,
+        "apical_dominance": 0.6,
+        "gravitropism": -0.1,
+        "gravity_strength": 3.0,
+        "branch_length": 1.5,
+        "randomness": 0.15,
+    },
+    "GNARLED": {
+        "iterations": 8,
+        "apical_dominance": 0.4,
+        "split_threshold": 0.5,
+        "randomness": 0.3,
+        "gravity_strength": 2.0,
+    },
+}
+
+
+def get_growth_preset_items() -> list[tuple[str, str, str]]:
+    """Get growth preset enum items for Blender EnumProperty."""
+    return [
+        ("STRUCTURED", "Structured", "Orderly growth with strong apical dominance"),
+        ("SPREADING", "Spreading", "Wide, spreading canopy with many branches"),
+        ("WEEPING", "Weeping", "Drooping branches like a willow"),
+        ("GNARLED", "Gnarled", "Twisted, organic growth pattern"),
+    ]
+
+
+def apply_growth_preset(growth_func, preset_name: str) -> None:
+    """Apply a growth preset's parameters to a GrowthFunction instance.
+
+    Args:
+        growth_func: A GrowthFunction instance to configure.
+        preset_name: Key from GROWTH_PRESETS.
+    """
+    preset = GROWTH_PRESETS.get(preset_name, {})
+    for key, value in preset.items():
+        if hasattr(growth_func, key):
+            setattr(growth_func, key, value)

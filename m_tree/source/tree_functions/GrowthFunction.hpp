@@ -4,6 +4,28 @@
 
 namespace Mtree
 {
+// Named constants for growth simulation
+namespace GrowthConstants
+{
+// Taper ratios - how much branches thin as they extend/split
+constexpr float kExtensionTaper = 0.95f;    // Branch extension taper
+constexpr float kSplitTaper = 0.9f;         // Split branches taper more
+constexpr float kLateralRadiusRatio = 0.8f; // Lateral bud inherits this fraction of parent radius
+
+// Energy distribution
+constexpr float kDormantBudEnergyRequest = 0.3f; // Dormant buds request less energy
+constexpr float kDormantBudVigorFactor = 0.5f;   // Additional suppression for dormant bud vigor
+
+// Numerical stability
+constexpr float kEpsilon = 0.001f; // Small value to prevent division by zero
+
+// Dynamic threshold adjustment
+constexpr float kThresholdAdjustmentStep = 0.1f; // Step size for cut threshold adaptation
+
+// Physical simulation
+constexpr float kGravityAngleMultiplier = 50.0f; // Converts torque to bend angle
+} // namespace GrowthConstants
+
 class GrowthFunction : public TreeFunction
 {
   private:
@@ -14,8 +36,12 @@ class GrowthFunction : public TreeFunction
 	void apply_gravity_rec(Node& node, Eigen::Matrix3f curent_rotation);
 	void update_absolute_position_rec(Node& node, const Vector3& node_position);
 
+	// Runtime state (reset at start of execute())
+	float current_cut_threshold_ = 0.0f; // Working cut threshold for current execution
+
   public:
 	int iterations = 5;
+	int preview_iteration = -1; // -1 means run all iterations
 	float apical_dominance = .7f;
 	float grow_threshold = .5f;
 	float split_angle = 60;
@@ -32,13 +58,23 @@ class GrowthFunction : public TreeFunction
 	float branch_angle = 60;
 	float philotaxis_angle = 2.399f;
 	float flower_threshold = .5f;
-
-	float growth_delta = .1f;
-	float flowering_delta = .1f;
+	bool enable_flowering = false;
 
 	float root_flux = 5;
 
+	// Lateral branching parameters
+	bool enable_lateral_branching = true;
+	float lateral_start = 0.1f;      // Start position along parent (0-1)
+	float lateral_end = 0.9f;        // End position along parent (0-1)
+	float lateral_density = 2.0f;    // Potential branch points per unit length
+	float lateral_activation = 0.4f; // Vigor threshold to activate dormant buds
+	float lateral_angle = 45.0f;     // Initial angle from parent direction
+
 	void execute(std::vector<Stem>& stems, int id, int parent_id) override;
+
+  private:
+	void create_lateral_buds_rec(Node& node, int id, Vector3 pos, float& dist_to_next,
+	                             float& current_length, float total_length, float& philo);
 };
 
 class BioNodeInfo : public GrowthInfo
@@ -49,7 +85,9 @@ class BioNodeInfo : public GrowthInfo
 		Meristem,
 		Branch,
 		Cut,
-		Ignored
+		Ignored,
+		Dormant,
+		Flower
 	} type;
 	float branch_weight = 0;
 	Vector3 center_of_mass;
@@ -58,12 +96,14 @@ class BioNodeInfo : public GrowthInfo
 	float vigor = 0;
 	int age = 0;
 	float philotaxis_angle = 0;
+	bool is_lateral = false; // Track if this branch originated from a lateral bud
 
-	BioNodeInfo(NodeType type, int age = 0, float philotaxis_angle = 0)
+	BioNodeInfo(NodeType type, int age = 0, float philotaxis_angle = 0, bool is_lateral = false)
 	{
 		this->type = type;
 		this->age = age;
 		this->philotaxis_angle = philotaxis_angle;
+		this->is_lateral = is_lateral;
 	};
 };
 
