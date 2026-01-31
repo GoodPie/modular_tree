@@ -1,4 +1,6 @@
 name: Build and Release
+permissions:
+  contents: read
 on: [push]
 
 jobs:
@@ -116,6 +118,8 @@ jobs:
   release:
     needs: package-addon
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       STATUS: ${{ !endsWith(github.ref, 'master') && 'alpha' || '' }}
     steps:
