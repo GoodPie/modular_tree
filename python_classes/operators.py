@@ -11,7 +11,7 @@ from bpy.utils import register_class, unregister_class
 from .m_tree_wrapper import lazy_m_tree as m_tree
 from .mesh_utils import create_mesh_from_cpp
 from .pivot_painter import ExportFormat, PivotPainterExporter
-from .presets import apply_preset, apply_trunk_preset, get_preset_items
+from .presets import apply_preset, apply_trunk_preset, get_growth_preset_items, get_preset_items
 from .resources.node_groups import distribute_leaves
 
 

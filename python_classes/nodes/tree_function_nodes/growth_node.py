@@ -7,12 +7,39 @@ import bpy
 from ...m_tree_wrapper import lazy_m_tree
 from ..base_types.node import MtreeFunctionNode
 
+# Parameter groupings for organized UI
+BASIC_PARAMS = ["seed", "iterations", "branch_length"]
+GROWTH_PARAMS = ["apical_dominance", "grow_threshold", "cut_threshold"]
+SPLIT_PARAMS = ["split_threshold", "split_angle"]
+PHYSICS_PARAMS = ["gravitropism", "gravity_strength", "randomness"]
+
+# Parameter descriptions for tooltips
+PARAM_DESCRIPTIONS = {
+    "seed": "Random seed for reproducible results",
+    "iterations": "Number of growth cycles (years of growth)",
+    "branch_length": "Length of each branch segment",
+    "apical_dominance": "How much the main leader suppresses side branches (0=equal, 1=dominant)",
+    "grow_threshold": "Minimum vigor for a meristem to grow",
+    "cut_threshold": "Vigor below which branches are pruned",
+    "split_threshold": "Vigor above which branches split",
+    "split_angle": "Angle between split branches",
+    "gravitropism": "Tendency to grow upward (negative=downward)",
+    "gravity_strength": "How much branches bend under their weight",
+    "randomness": "Random variation in branch direction",
+}
+
 
 class GrowthNode(bpy.types.Node, MtreeFunctionNode):
     """L-system style growth simulation for biologically-inspired tree generation"""
 
     bl_idname = "mt_GrowthNode"
     bl_label = "Growth"
+
+    # Collapsible section states for inspector panel
+    show_basic: bpy.props.BoolProperty(name="Basic", default=True)
+    show_growth: bpy.props.BoolProperty(name="Growth Control", default=True)
+    show_split: bpy.props.BoolProperty(name="Splitting", default=False)
+    show_physics: bpy.props.BoolProperty(name="Physics", default=False)
 
     @property
     def tree_function(self):
