@@ -1,10 +1,17 @@
 #pragma once
 #include "source/tree/Node.hpp"
 #include "source/utilities/RandomGenerator.hpp"
+#include <concepts>
 #include <vector>
 
 namespace Mtree
 {
+
+template <typename T>
+concept TreeFunctionType = requires(T& func, std::vector<Stem>& stems, int id, int parent_id) {
+	{ func.execute(stems, id, parent_id) } -> std::same_as<void>;
+};
+
 class TreeFunction
 {
   protected:

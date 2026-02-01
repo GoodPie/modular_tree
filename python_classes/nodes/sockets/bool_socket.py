@@ -1,6 +1,7 @@
 import bpy
 
 from ..base_types.socket import MtreeSocket
+from ..tree_function_nodes.tree_mesher_node import debounced_build
 
 
 class MtreeBoolSocket(bpy.types.NodeSocket, MtreeSocket):
@@ -12,7 +13,10 @@ class MtreeBoolSocket(bpy.types.NodeSocket, MtreeSocket):
     def update_value(self, context):
         mesher = self.node.get_mesher()
         if mesher is not None:
-            mesher.build_tree()
+            if getattr(mesher, "auto_update", True):
+                debounced_build(mesher)
+            else:
+                mesher.build_tree()
 
     property_value: bpy.props.BoolProperty(default=True, update=update_value)
 

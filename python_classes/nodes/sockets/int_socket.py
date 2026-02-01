@@ -1,6 +1,7 @@
 import bpy
 
 from ..base_types.socket import MtreeSocket
+from ..tree_function_nodes.tree_mesher_node import debounced_build
 
 
 class MtreeIntSocket(bpy.types.NodeSocket, MtreeSocket):
@@ -16,7 +17,10 @@ class MtreeIntSocket(bpy.types.NodeSocket, MtreeSocket):
         self["property_value"] = max(self.min_value, min(self.max_value, self.property_value))
         mesher = self.node.get_mesher()
         if mesher is not None:
-            mesher.build_tree()
+            if getattr(mesher, "auto_update", True):
+                debounced_build(mesher)
+            else:
+                mesher.build_tree()
 
     property_value: bpy.props.IntProperty(default=0, update=update_value)
 

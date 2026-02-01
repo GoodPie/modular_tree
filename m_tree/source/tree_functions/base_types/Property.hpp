@@ -1,10 +1,16 @@
 #pragma once
 #include "source/utilities/GeometryUtilities.hpp"
 #include "source/utilities/RandomGenerator.hpp"
+#include <concepts>
 #include <vector>
 
 namespace Mtree
 {
+
+template <typename T>
+concept PropertyFunction = requires(T& prop, float x) {
+	{ prop.execute(x) } -> std::convertible_to<float>;
+};
 
 struct Property
 {
@@ -63,19 +69,19 @@ struct PropertyWrapper
 
 	PropertyWrapper() { property = std::make_shared<ConstantProperty>(1); };
 
-	template <class T> PropertyWrapper(T& property)
+	template <PropertyFunction T> PropertyWrapper(T& prop)
 	{
-		this->property = std::make_shared<T>(property);
+		this->property = std::make_shared<T>(prop);
 	};
 
-	template <class T> PropertyWrapper(T&& property)
+	template <PropertyFunction T> PropertyWrapper(T&& prop)
 	{
-		this->property = std::make_shared<T>(property);
+		this->property = std::make_shared<T>(prop);
 	};
 
-	template <class T> void set_property(T& property)
+	template <PropertyFunction T> void set_property(T& prop)
 	{
-		this->property = std::make_shared<T>(property);
+		this->property = std::make_shared<T>(prop);
 	}
 
 	float execute(float x) { return property->execute(x); };

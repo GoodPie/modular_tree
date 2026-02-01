@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import time
 
 import bpy
@@ -10,9 +11,35 @@ from ...m_tree_wrapper import lazy_m_tree as m_tree
 from ...mesh_utils import create_mesh_from_cpp
 from ..base_types.node import MtreeNode
 
+# Debounce state for auto-update
+_pending_timers = {}
+_DEBOUNCE_DELAY = 0.3  # seconds
+
+
+def debounced_build(mesher, delay=_DEBOUNCE_DELAY):
+    """Schedule a debounced tree rebuild."""
+    mesher_id = id(mesher)
+
+    # Cancel existing timer for this mesher
+    if mesher_id in _pending_timers:
+        with contextlib.suppress(ValueError):
+            bpy.app.timers.unregister(_pending_timers[mesher_id])
+
+    def do_build():
+        if mesher_id in _pending_timers:
+            del _pending_timers[mesher_id]
+        mesher.build_tree()
+        return None  # Don't repeat
+
+    _pending_timers[mesher_id] = do_build
+    bpy.app.timers.register(do_build, first_interval=delay)
+
 
 def on_update_prop(node, context):
-    node.build_tree()
+    if getattr(node, "auto_update", True):
+        debounced_build(node)
+    else:
+        node.build_tree()
 
 
 class TreeMesherNode(bpy.types.Node, MtreeNode):
@@ -21,6 +48,11 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
     bl_idname = "mt_MesherNode"
     bl_label = "Tree Mesher"
 
+    auto_update: bpy.props.BoolProperty(
+        name="Auto Update",
+        description="Automatically rebuild tree when parameters or connections change",
+        default=True,
+    )
     radial_resolution: bpy.props.IntProperty(
         name="Radial Resolution", default=32, min=3, update=on_update_prop
     )
@@ -70,6 +102,7 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
         )
 
     def _draw_properties(self, container):
+        container.prop(self, "auto_update")
         container.prop(self, "radial_resolution")
         container.prop(self, "smoothness")
 

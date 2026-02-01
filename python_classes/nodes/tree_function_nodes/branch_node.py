@@ -8,6 +8,7 @@ from ...m_tree_wrapper import lazy_m_tree
 from ...viewport.shape_formulas import BLENDER_SHAPE_MAP
 from ...viewport.shape_formulas import CrownShape as PyCrownShape
 from ..base_types.node import MtreeFunctionNode
+from .tree_mesher_node import debounced_build
 
 # Parameter groupings for organized UI
 BASIC_PARAMS = ["seed", "start", "end", "length", "branches_density", "start_angle"]
@@ -38,6 +39,13 @@ PARAM_DESCRIPTIONS = {
 }
 
 
+def _update_crown_property(self, context):
+    """Trigger auto-update when crown shape properties change."""
+    mesher = self.get_mesher()
+    if mesher is not None and getattr(mesher, "auto_update", True):
+        debounced_build(mesher)
+
+
 class BranchNode(bpy.types.Node, MtreeFunctionNode):
     bl_idname = "mt_BranchNode"
     bl_label = "Branches"
@@ -64,6 +72,7 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
         ],
         default="CYLINDRICAL",
         description="Crown shape envelope that controls branch length based on height",
+        update=_update_crown_property,
     )
 
     angle_variation: bpy.props.FloatProperty(
@@ -72,6 +81,7 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
         min=-45.0,
         max=45.0,
         description="Height-based angle variation: positive = upward at top, downward at base",
+        update=_update_crown_property,
     )
 
     show_crown_preview: bpy.props.BoolProperty(
