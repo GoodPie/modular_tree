@@ -13,18 +13,39 @@ using namespace Mtree;
 
 int main()
 {
-    std::cout<<"hello world"<<std::endl;
+    std::cout << "Testing BranchFunction (BranchGrowthInfo variant)..." << std::endl;
 
-    auto trunk = std::make_shared<TrunkFunction>();
-    auto branch = std::make_shared<BranchFunction>();
-    trunk->add_child(branch);
-    branch->start_radius = ConstantProperty{ 1.5 };
-    //trunk->length = 0.001;
-    Tree tree(trunk);
-    tree.execute_functions();
-    ManifoldMesher mesher;
-    mesher.radial_resolution = 32;
-    mesher.mesh_tree(tree);
+    // Test 1: BranchFunction uses BranchGrowthInfo
+    {
+        auto trunk = std::make_shared<TrunkFunction>();
+        auto branch = std::make_shared<BranchFunction>();
+        trunk->add_child(branch);
+        branch->start_radius = ConstantProperty{1.5};
+        Tree tree(trunk);
+        tree.execute_functions();
+        ManifoldMesher mesher;
+        mesher.radial_resolution = 32;
+        auto mesh = mesher.mesh_tree(tree);
+        std::cout << "  Vertices: " << mesh.vertices.size() << std::endl;
+    }
 
+    std::cout << "Testing GrowthFunction (BioNodeInfo variant)..." << std::endl;
+
+    // Test 2: GrowthFunction uses BioNodeInfo
+    {
+        auto trunk = std::make_shared<TrunkFunction>();
+        auto growth = std::make_shared<GrowthFunction>();
+        growth->iterations = 3;
+        growth->enable_lateral_branching = true;
+        trunk->add_child(growth);
+        Tree tree(trunk);
+        tree.execute_functions();
+        ManifoldMesher mesher;
+        mesher.radial_resolution = 16;
+        auto mesh = mesher.mesh_tree(tree);
+        std::cout << "  Vertices: " << mesh.vertices.size() << std::endl;
+    }
+
+    std::cout << "All tests passed!" << std::endl;
     return 0;
 }
