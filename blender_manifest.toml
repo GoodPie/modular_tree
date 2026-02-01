@@ -9,6 +9,7 @@ maintainer = "GoodPie <brandynbb96@gmail.com>"
 type = "add-on"
 blender_version_min = "5.0.0"
 license = ["SPDX:GPL-3.0-or-later"]
+copyright = ["2021 MaximeHerpin", "2026 Brandyn Britton"]
 tags = ["3D View", "Mesh", "Add Curve"]
 wheels = []
 platforms = ["windows-x64", "macos-x64", "macos-arm64", "linux-x64"]
