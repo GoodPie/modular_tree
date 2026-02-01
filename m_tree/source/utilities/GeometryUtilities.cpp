@@ -1,5 +1,3 @@
-#define _USE_MATH_DEFINES
-
 #include "GeometryUtilities.hpp"
 #include <Eigen/Geometry>
 #include <cmath>
@@ -19,7 +17,7 @@ void add_circle(std::vector<Vector3>& points, Vector3 position, Vector3 directio
 
 	for (size_t i = 0; i < n_points; i++)
 	{
-		float circle_angle = M_PI * (float)i / n_points * 2;
+		float circle_angle = std::numbers::pi_v<float> * (float)i / n_points * 2;
 		Vector3 position_in_circle =
 		    Vector3{std::cos(circle_angle), std::sin(circle_angle), 0} * radius;
 		position_in_circle = position + rot * position_in_circle;
@@ -70,7 +68,7 @@ float lerp(float a, float b, float t)
 Vector3 get_orthogonal_vector(const Vector3& v)
 {
 	Vector3 tmp;
-	if (abs(v.z()) < .95)
+	if (std::abs(v.z()) < .95)
 	{
 		tmp = Vector3{1, 0, 0};
 	}

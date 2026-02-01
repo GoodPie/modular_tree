@@ -1,4 +1,3 @@
-#pragma once
 #include "GrowthFunction.hpp"
 #include "./base_types/TreeFunction.hpp"
 #include "source/utilities/GeometryUtilities.hpp"
@@ -17,8 +16,8 @@ void setup_growth_information_rec(Node& node, bool suppress_tip_growth)
 	BioNodeInfo::NodeType tip_type =
 	    suppress_tip_growth ? BioNodeInfo::NodeType::Ignored : BioNodeInfo::NodeType::Meristem;
 
-	node.growthInfo = std::make_unique<BioNodeInfo>(
-	    node.children.size() == 0 ? tip_type : BioNodeInfo::NodeType::Ignored);
+	node.growthInfo =
+	    BioNodeInfo(node.children.size() == 0 ? tip_type : BioNodeInfo::NodeType::Ignored);
 	for (auto& child : node.children)
 		setup_growth_information_rec(child->node, suppress_tip_growth);
 }
@@ -27,7 +26,7 @@ void setup_growth_information_rec(Node& node, bool suppress_tip_growth)
 // realtive amount of energy it receive
 float GrowthFunction::update_vigor_ratio_rec(Node& node)
 {
-	BioNodeInfo& info = static_cast<BioNodeInfo&>(*node.growthInfo);
+	auto& info = std::get<BioNodeInfo>(node.growthInfo);
 	if (info.type == BioNodeInfo::NodeType::Meristem)
 	{
 		return 1;
@@ -55,12 +54,10 @@ float GrowthFunction::update_vigor_ratio_rec(Node& node)
 			float t = apical_dominance;
 			vigor_ratio = (t * light_flux) /
 			              (t * light_flux + (1 - t) * child_flux + GrowthConstants::kEpsilon);
-			static_cast<BioNodeInfo*>(node.children[i]->node.growthInfo.get())->vigor_ratio =
-			    1 - vigor_ratio;
+			std::get<BioNodeInfo>(node.children[i]->node.growthInfo).vigor_ratio = 1 - vigor_ratio;
 			light_flux += child_flux;
 		}
-		static_cast<BioNodeInfo*>(node.children[0]->node.growthInfo.get())->vigor_ratio =
-		    vigor_ratio;
+		std::get<BioNodeInfo>(node.children[0]->node.growthInfo).vigor_ratio = vigor_ratio;
 		return light_flux;
 	}
 	else
@@ -73,16 +70,16 @@ float GrowthFunction::update_vigor_ratio_rec(Node& node)
 // update the amount of energy available to a node
 void GrowthFunction::update_vigor_rec(Node& node, float vigor)
 {
-	BioNodeInfo& info = static_cast<BioNodeInfo&>(*node.growthInfo);
+	auto& info = std::get<BioNodeInfo>(node.growthInfo);
 	info.vigor = vigor;
 	for (auto& child : node.children)
 	{
-		BioNodeInfo* child_info = static_cast<BioNodeInfo*>(child->node.growthInfo.get());
-		float child_vigor = child_info->vigor_ratio * vigor;
+		auto& child_info = std::get<BioNodeInfo>(child->node.growthInfo);
+		float child_vigor = child_info.vigor_ratio * vigor;
 
 		// Give dormant buds a fixed proportion of parent vigor (bypasses competitive apical
 		// dominance)
-		if (child_info->type == BioNodeInfo::NodeType::Dormant)
+		if (child_info.type == BioNodeInfo::NodeType::Dormant)
 		{
 			child_vigor =
 			    vigor * (1.0f - apical_dominance) * GrowthConstants::kDormantBudVigorFactor;
@@ -95,7 +92,7 @@ void GrowthFunction::update_vigor_rec(Node& node, float vigor)
 // apply rules on the node based on the energy available to it
 void GrowthFunction::simulate_growth_rec(Node& node, int id)
 {
-	BioNodeInfo& info = static_cast<BioNodeInfo&>(*node.growthInfo);
+	auto& info = std::get<BioNodeInfo>(node.growthInfo);
 
 	// Check for dormant bud activation
 	bool activate_dormant =
@@ -149,8 +146,7 @@ void GrowthFunction::simulate_growth_rec(Node& node, int id)
 		    NodeChild{Node{child_direction, node.tangent, branch_length, child_radius, id}, 1};
 		float child_angle =
 		    split ? info.philotaxis_angle + philotaxis_angle : info.philotaxis_angle;
-		child.node.growthInfo =
-		    std::make_unique<BioNodeInfo>(BioNodeInfo::NodeType::Meristem, 0, child_angle);
+		child.node.growthInfo = BioNodeInfo(BioNodeInfo::NodeType::Meristem, 0, child_angle);
 		node.children.push_back(std::make_shared<NodeChild>(std::move(child)));
 		info.type = BioNodeInfo::NodeType::Branch;
 	}
@@ -165,7 +161,7 @@ void GrowthFunction::simulate_growth_rec(Node& node, int id)
 		float child_length = branch_length * (info.vigor + .1f);
 		NodeChild child =
 		    NodeChild{Node{child_direction, node.tangent, branch_length, child_radius, id}, 1};
-		child.node.growthInfo = std::make_unique<BioNodeInfo>(BioNodeInfo::NodeType::Meristem);
+		child.node.growthInfo = BioNodeInfo(BioNodeInfo::NodeType::Meristem);
 		node.children.push_back(std::make_shared<NodeChild>(std::move(child)));
 		info.type = BioNodeInfo::NodeType::Branch;
 	}
@@ -177,7 +173,7 @@ void GrowthFunction::simulate_growth_rec(Node& node, int id)
 
 void GrowthFunction::get_weight_rec(Node& node)
 {
-	BioNodeInfo& info = static_cast<BioNodeInfo&>(*node.growthInfo);
+	auto& info = std::get<BioNodeInfo>(node.growthInfo);
 	for (auto& child : node.children)
 	{
 		get_weight_rec(child->node);
@@ -188,7 +184,7 @@ void GrowthFunction::get_weight_rec(Node& node)
 	float total_weight = segment_weight;
 	for (auto& child : node.children)
 	{
-		BioNodeInfo& child_info = static_cast<BioNodeInfo&>(*child->node.growthInfo);
+		auto& child_info = std::get<BioNodeInfo>(child->node.growthInfo);
 		center_of_mass += child_info.center_of_mass * child_info.branch_weight;
 		total_weight += child_info.branch_weight;
 	}
@@ -199,7 +195,7 @@ void GrowthFunction::get_weight_rec(Node& node)
 
 void GrowthFunction::apply_gravity_rec(Node& node, Eigen::Matrix3f curent_rotation)
 {
-	BioNodeInfo& info = static_cast<BioNodeInfo&>(*node.growthInfo);
+	auto& info = std::get<BioNodeInfo>(node.growthInfo);
 
 	// Only apply gravity bending to growth nodes, not the original trunk
 	if (info.type != BioNodeInfo::NodeType::Ignored)
@@ -226,7 +222,7 @@ void GrowthFunction::apply_gravity_rec(Node& node, Eigen::Matrix3f curent_rotati
 
 void GrowthFunction::update_absolute_position_rec(Node& node, const Vector3& node_position)
 {
-	static_cast<BioNodeInfo*>(node.growthInfo.get())->absolute_position = node_position;
+	std::get<BioNodeInfo>(node.growthInfo).absolute_position = node_position;
 	for (auto& child : node.children)
 	{
 		Vector3 child_position =
@@ -240,7 +236,7 @@ void GrowthFunction::create_lateral_buds_rec(Node& node, int id, Vector3 pos, fl
                                              float& current_length, float total_length,
                                              float& philo)
 {
-	BioNodeInfo& info = static_cast<BioNodeInfo&>(*node.growthInfo);
+	auto& info = std::get<BioNodeInfo>(node.growthInfo);
 
 	// Only create buds on Ignored nodes (part of the original trunk structure)
 	if (info.type == BioNodeInfo::NodeType::Ignored && node.children.size() > 0)
@@ -284,8 +280,7 @@ void GrowthFunction::create_lateral_buds_rec(Node& node, int id, Vector3 pos, fl
 
 				NodeChild child{Node{bud_direction, node.tangent, child_length, child_radius, id},
 				                position_in_parent};
-				child.node.growthInfo =
-				    std::make_unique<BioNodeInfo>(BioNodeInfo::NodeType::Dormant, 0, philo);
+				child.node.growthInfo = BioNodeInfo(BioNodeInfo::NodeType::Dormant, 0, philo);
 				node.children.push_back(std::make_shared<NodeChild>(std::move(child)));
 
 				dist_to_next = bud_spacing;
