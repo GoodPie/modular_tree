@@ -110,9 +110,14 @@ jobs:
         run: ls -R wheels
       - name: Install Blender
         run: |
-          sudo apt-get update
-          sudo apt-get install -y snapd
-          sudo snap install blender --classic
+          set -e
+          BLENDER_VERSION="5.0.0"
+          BLENDER_TAR="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
+          BLENDER_URL="https://download.blender.org/release/Blender5.0/${BLENDER_TAR}"
+          mkdir -p "$HOME/blender"
+          curl -L "$BLENDER_URL" -o "$HOME/blender/$BLENDER_TAR"
+          tar -xJf "$HOME/blender/$BLENDER_TAR" -C "$HOME/blender"
+          sudo ln -s "$HOME/blender/blender-${BLENDER_VERSION}-linux-x64/blender" /usr/local/bin/blender
       - name: Prepare addon directory
         run: python .github/scripts/setup_addon.py --no-zip
       - name: Build extension with split platforms
