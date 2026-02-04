@@ -53,7 +53,7 @@ jobs:
         with:
           package-dir: m_tree
         env:
-          CIBW_BUILD: cp311-manylinux_x86_64 cp311-macosx_arm64 cp311-win_amd64
+          CIBW_BUILD: cp311-manylinux_x86_64 cp311-macosx_arm64 cp311-macosx_x86_64 cp311-win_amd64
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
           CIBW_BEFORE_BUILD_LINUX: >
             dnf install -y zip unzip tar curl &&
@@ -63,7 +63,7 @@ jobs:
           CIBW_BEFORE_BUILD_MACOS: >
             cd {package}/dependencies/vcpkg &&
             ./bootstrap-vcpkg.sh &&
-            ./vcpkg install eigen3:arm64-osx
+            ./vcpkg install eigen3:arm64-osx eigen3:x64-osx
           CIBW_BEFORE_BUILD_WINDOWS: >
             cd /d {package}\dependencies\vcpkg &&
             bootstrap-vcpkg.bat &&
@@ -108,8 +108,26 @@ jobs:
           merge-multiple: true
       - name: Display downloaded wheels
         run: ls -R wheels
-      - name: Package addon
-        run: python .github/scripts/setup_addon.py
+      - name: Install Blender
+        run: |
+          set -e
+          BLENDER_VERSION="5.0.0"
+          BLENDER_TAR="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
+          BLENDER_URL="https://download.blender.org/release/Blender5.0/${BLENDER_TAR}"
+          mkdir -p "$HOME/blender"
+          curl -L "$BLENDER_URL" -o "$HOME/blender/$BLENDER_TAR"
+          tar -xJf "$HOME/blender/$BLENDER_TAR" -C "$HOME/blender"
+          sudo ln -s "$HOME/blender/blender-${BLENDER_VERSION}-linux-x64/blender" /usr/local/bin/blender
+      - name: Prepare addon directory
+        run: python .github/scripts/setup_addon.py --no-zip
+      - name: Build extension with split platforms
+        run: |
+          VERSION=$(cat VERSION)
+          ADDON_ROOT="tmp/modular_tree_${VERSION}/modular_tree"
+          cd "$ADDON_ROOT"
+          blender --command extension build --split-platforms --output-dir ../../
+      - name: Display built extensions
+        run: ls -la tmp/*.zip
       - uses: actions/upload-artifact@v6
         with:
           name: modular_tree_extension
