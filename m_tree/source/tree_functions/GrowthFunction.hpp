@@ -77,34 +77,4 @@ class GrowthFunction : public TreeFunction
 	                             float& current_length, float total_length, float& philo);
 };
 
-class BioNodeInfo : public GrowthInfo
-{
-  public:
-	enum class NodeType
-	{
-		Meristem,
-		Branch,
-		Cut,
-		Ignored,
-		Dormant,
-		Flower
-	} type;
-	float branch_weight = 0;
-	Vector3 center_of_mass;
-	Vector3 absolute_position;
-	float vigor_ratio = 1;
-	float vigor = 0;
-	int age = 0;
-	float philotaxis_angle = 0;
-	bool is_lateral = false; // Track if this branch originated from a lateral bud
-
-	BioNodeInfo(NodeType type, int age = 0, float philotaxis_angle = 0, bool is_lateral = false)
-	{
-		this->type = type;
-		this->age = age;
-		this->philotaxis_angle = philotaxis_angle;
-		this->is_lateral = is_lateral;
-	};
-};
-
 } // namespace Mtree

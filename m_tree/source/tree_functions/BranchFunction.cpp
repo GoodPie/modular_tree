@@ -1,5 +1,7 @@
 #include <iostream>
+#include <numbers>
 #include <queue>
+#include <ranges>
 
 #include "BranchFunction.hpp"
 #include "source/utilities/GeometryUtilities.hpp"
@@ -13,7 +15,7 @@ constexpr float EPSILON = 0.001f;
 
 void update_positions_rec(Node& node, const Vector3& position)
 {
-	auto& info = static_cast<BranchFunction::BranchGrowthInfo&>(*node.growthInfo);
+	auto& info = std::get<BranchGrowthInfo>(node.growthInfo);
 	info.position = position;
 
 	for (auto& child : node.children)
@@ -67,23 +69,19 @@ Vector3 get_split_direction(const Node& parent, const Vector3& parent_position,
 
 void mark_inactive(Node& node)
 {
-	auto& info = static_cast<BranchFunction::BranchGrowthInfo&>(*node.growthInfo);
+	auto& info = std::get<BranchGrowthInfo>(node.growthInfo);
 	info.inactive = true;
 }
 
 bool propagate_inactive_rec(Node& node)
 {
-	auto* info = dynamic_cast<BranchFunction::BranchGrowthInfo*>(node.growthInfo.get());
+	auto* info = std::get_if<BranchGrowthInfo>(&node.growthInfo);
 
 	if (node.children.size() == 0 || info->inactive)
 		return info->inactive;
 
-	bool inactive = false;
-	for (size_t i = 0; i < node.children.size(); i++)
-	{
-		if (propagate_inactive_rec(node.children[i]->node))
-			inactive = true;
-	}
+	bool inactive = std::ranges::any_of(node.children, [](const auto& child)
+	                                    { return propagate_inactive_rec(child->node); });
 	info->inactive = inactive;
 	return inactive;
 }
@@ -96,20 +94,21 @@ void BranchFunction::apply_gravity_to_branch(Node& branch_origin)
 	propagate_inactive_rec(branch_origin);
 	update_weight_rec(branch_origin);
 	apply_gravity_rec(branch_origin, Eigen::AngleAxisf::Identity());
-	BranchGrowthInfo& info = static_cast<BranchGrowthInfo&>(*branch_origin.growthInfo);
+	auto& info = std::get<BranchGrowthInfo>(branch_origin.growthInfo);
 	update_positions_rec(branch_origin, info.position);
 }
 
 void BranchFunction::apply_gravity_rec(Node& node, Eigen::AngleAxisf curent_rotation)
 {
-	BranchGrowthInfo& info = static_cast<BranchGrowthInfo&>(*node.growthInfo);
+	auto& info = std::get<BranchGrowthInfo>(node.growthInfo);
 	if (!info.inactive || true)
 	{
-		float horizontality = 1 - abs(node.direction.z());
+		float horizontality = 1 - std::abs(node.direction.z());
 		info.age += 1 / resolution;
 		float displacement = horizontality * std::pow(info.cumulated_weight, .5f) *
 		                     gravity->strength / resolution / resolution / 1000 / (1 + info.age);
-		displacement *= std::exp(-std::abs(info.deviation_from_rest_pose / resolution * gravity->stiffness));
+		displacement *=
+		    std::exp(-std::abs(info.deviation_from_rest_pose / resolution * gravity->stiffness));
 		info.deviation_from_rest_pose += displacement;
 
 		Vector3 tangent = node.direction.cross(Vector3{0, 0, -1}).normalized();
@@ -131,11 +130,11 @@ void BranchFunction::update_weight_rec(Node& node)
 	for (auto& child : node.children)
 	{
 		update_weight_rec(child->node);
-		BranchGrowthInfo& child_info = dynamic_cast<BranchGrowthInfo&>(*child->node.growthInfo);
+		auto& child_info = std::get<BranchGrowthInfo>(child->node.growthInfo);
 		node_weight += child_info.cumulated_weight;
 	}
 
-	BranchGrowthInfo* info = dynamic_cast<BranchGrowthInfo*>(node.growthInfo.get());
+	auto* info = std::get_if<BranchGrowthInfo>(&node.growthInfo);
 	info->cumulated_weight = node_weight;
 }
 
@@ -150,16 +149,16 @@ void BranchFunction::grow_node_once(Node& node, const int id,
 		return;
 	}
 
-	BranchGrowthInfo& info = static_cast<BranchGrowthInfo&>(*node.growthInfo);
+	auto& info = std::get<BranchGrowthInfo>(node.growthInfo);
 	float factor_in_branch = info.current_length / info.desired_length;
 
 	float child_radius =
 	    Geometry::lerp(info.origin_radius, info.origin_radius * end_radius, factor_in_branch);
 	float child_length = std::min(1 / resolution, info.desired_length - info.current_length);
 	bool should_terminate;
-	Vector3 child_direction = get_main_child_direction(node, info.position, gravity->up_attraction, flatness,
-	                                                   randomness.execute(factor_in_branch),
-	                                                   resolution, should_terminate);
+	Vector3 child_direction = get_main_child_direction(
+	    node, info.position, gravity->up_attraction, flatness, randomness.execute(factor_in_branch),
+	    resolution, should_terminate);
 
 	if (should_terminate)
 	{
@@ -167,38 +166,42 @@ void BranchFunction::grow_node_once(Node& node, const int id,
 		return;
 	}
 
-	NodeChild child{Node{child_direction, node.tangent, child_length, child_radius, id}, 1};
+	NodeChild child{.node = Node{child_direction, node.tangent, child_length, child_radius, id},
+	                .position_in_parent = 1};
 	node.children.push_back(std::make_shared<NodeChild>(std::move(child)));
 	auto& child_node = node.children.back()->node;
 
 	float current_length = info.current_length + child_length;
 	Vector3 child_position = info.position + child_direction * child_length;
-	BranchGrowthInfo child_info{info.desired_length, info.origin_radius, child_position,
-	                            current_length};
-	child_node.growthInfo = std::make_unique<BranchGrowthInfo>(child_info);
+	child_node.growthInfo = BranchGrowthInfo{.desired_length = info.desired_length,
+	                                         .origin_radius = info.origin_radius,
+	                                         .position = child_position,
+	                                         .current_length = current_length};
 	if (current_length < info.desired_length)
 	{
 		results.push(std::ref<Node>(child_node));
 	}
 
-	bool do_split =
-	    rand_gen.get_0_1() * resolution < split->probability; // should the node split into two children
+	bool do_split = rand_gen.get_0_1() * resolution <
+	                split->probability; // should the node split into two children
 	if (do_split)
 	{
-		Vector3 split_child_direction = get_split_direction(node, info.position, gravity->up_attraction,
-		                                                    flatness, resolution, split->angle);
+		Vector3 split_child_direction = get_split_direction(
+		    node, info.position, gravity->up_attraction, flatness, resolution, split->angle);
 		float split_child_radius = node.radius * split->radius;
 
 		NodeChild child{
-		    Node{split_child_direction, node.tangent, child_length, split_child_radius, id},
-		    rand_gen.get_0_1()};
+		    .node = Node{split_child_direction, node.tangent, child_length, split_child_radius, id},
+		    .position_in_parent = rand_gen.get_0_1()};
 		node.children.push_back(std::make_shared<NodeChild>(std::move(child)));
 		auto& child_node = node.children.back()->node;
 
 		Vector3 split_child_position = info.position + split_child_direction * child_length;
-		BranchGrowthInfo child_info{info.desired_length, info.origin_radius * split->radius,
-		                            split_child_position, current_length};
-		child_node.growthInfo = std::make_unique<BranchGrowthInfo>(child_info);
+		child_node.growthInfo =
+		    BranchGrowthInfo{.desired_length = info.desired_length,
+		                     .origin_radius = info.origin_radius * split->radius,
+		                     .position = split_child_position,
+		                     .current_length = current_length};
 		if (current_length < info.desired_length)
 		{
 			results.push(std::ref<Node>(child_node));
@@ -249,7 +252,8 @@ BranchFunction::get_origins(std::vector<Stem>& stems, const int id, const int pa
 	float crown_start_z = effective_crown_height * crown->base_size;
 	float crown_zone_height = effective_crown_height * (1.0f - crown->base_size);
 
-	float origins_dist = 1 / (distribution->density + .001); // distance between two consecutive origins
+	float origins_dist =
+	    1 / (distribution->density + .001); // distance between two consecutive origins
 
 	for (auto& branch : selection) // parent branches
 	{
@@ -260,9 +264,10 @@ BranchFunction::get_origins(std::vector<Stem>& stems, const int id, const int pa
 
 		float branch_length = NodeUtilities::get_branch_length(*branch[0].node);
 		float absolute_start =
-		    distribution->start * branch_length; // the length at which we can start adding new branch origins
-		float absolute_end =
-		    distribution->end * branch_length; // the length at which we stop adding new branch origins
+		    distribution->start *
+		    branch_length; // the length at which we can start adding new branch origins
+		float absolute_end = distribution->end *
+		                     branch_length; // the length at which we stop adding new branch origins
 		float current_length = 0;
 		float dist_to_next_origin = absolute_start;
 		Vector3 tangent = Geometry::get_orthogonal_vector(branch[0].node->direction);
@@ -276,8 +281,10 @@ BranchFunction::get_origins(std::vector<Stem>& stems, const int id, const int pa
 			{
 				continue;
 			}
-			auto rot = Eigen::AngleAxisf((distribution->phillotaxis + (rand_gen.get_0_1() - .5) * 2) / 180 * M_PI,
-			                             node.direction);
+			auto rot =
+			    Eigen::AngleAxisf((distribution->phillotaxis + (rand_gen.get_0_1() - .5) * 2) /
+			                          180 * std::numbers::pi_v<float>,
+			                      node.direction);
 			if (dist_to_next_origin > node.length)
 			{
 				dist_to_next_origin -= node.length;
@@ -311,9 +318,9 @@ BranchFunction::get_origins(std::vector<Stem>& stems, const int id, const int pa
 					float effective_start_angle = start_angle.execute(factor);
 
 					// Calculate height-based modifications for crown shape and angle
-					bool needs_height_calc = crown_zone_height > EPSILON &&
-					    (crown->shape != CrownShape::Cylindrical ||
-					     std::abs(crown->angle_variation) > EPSILON);
+					bool needs_height_calc =
+					    crown_zone_height > EPSILON && (crown->shape != CrownShape::Cylindrical ||
+					                                    std::abs(crown->angle_variation) > EPSILON);
 
 					if (needs_height_calc)
 					{
@@ -339,9 +346,10 @@ BranchFunction::get_origins(std::vector<Stem>& stems, const int id, const int pa
 							{
 								float shape_ratio = CrownShapeUtils::get_shape_ratio(
 								    CrownShape::Conical, height_ratio);
-								float angle_offset = crown->angle_variation * (1.0f - 2.0f * shape_ratio);
-								effective_start_angle = std::clamp(
-								    effective_start_angle + angle_offset, 0.0f, 180.0f);
+								float angle_offset =
+								    crown->angle_variation * (1.0f - 2.0f * shape_ratio);
+								effective_start_angle =
+								    std::clamp(effective_start_angle + angle_offset, 0.0f, 180.0f);
 							}
 						}
 					}
@@ -358,9 +366,11 @@ BranchFunction::get_origins(std::vector<Stem>& stems, const int id, const int pa
 					auto& child_node = node.children.back()->node;
 					Vector3 child_position =
 					    node_position + node.direction * node.length * position_in_parent;
-					child_node.growthInfo = std::make_unique<BranchGrowthInfo>(
-					    branch_length - node_length, child_radius, child_position,
-					    child_node.length, 0);
+					child_node.growthInfo =
+					    BranchGrowthInfo{.desired_length = branch_length - node_length,
+					                     .origin_radius = child_radius,
+					                     .position = child_position,
+					                     .current_length = child_node.length};
 
 					if (branch_length - node_length > 1e-3)
 						origins.push_back(std::ref(child_node));

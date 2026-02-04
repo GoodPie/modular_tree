@@ -19,7 +19,7 @@ class Node
 	float length;
 	float radius;
 	int creator_id = 0;
-	std::unique_ptr<GrowthInfo> growthInfo = nullptr;
+	GrowthInfo growthInfo;
 
 	bool is_leaf() const;
 
