@@ -120,7 +120,7 @@ jobs:
           VERSION=$(cat VERSION)
           ADDON_ROOT="tmp/modular_tree_${VERSION}/modular_tree"
           cd "$ADDON_ROOT"
-          blender --command extension build --split-platforms --output-dir ../../../
+          blender --command extension build --split-platforms --output-dir ../../
       - name: Display built extensions
         run: ls -la tmp/*.zip
       - uses: actions/upload-artifact@v6
