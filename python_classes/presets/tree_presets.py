@@ -17,6 +17,21 @@ if TYPE_CHECKING:
 # Parameters that require PropertyWrapper (ConstantProperty) instead of raw values
 PROPERTY_WRAPPER_PARAMS = {"length", "start_radius", "randomness", "start_angle"}
 
+# Mapping from preset parameter names to nested C++ struct paths on BranchFunction.
+# Parameters not in this map are set directly on BranchFunction.
+_NESTED_PROPERTY_MAP = {
+    "start": ("distribution", "start"),
+    "end": ("distribution", "end"),
+    "branches_density": ("distribution", "density"),
+    "phillotaxis": ("distribution", "phillotaxis"),
+    "gravity_strength": ("gravity", "strength"),
+    "stiffness": ("gravity", "stiffness"),
+    "up_attraction": ("gravity", "up_attraction"),
+    "split_proba": ("split", "probability"),
+    "split_radius": ("split", "radius"),
+    "split_angle": ("split", "angle"),
+}
+
 
 @dataclass
 class TreePreset:
@@ -161,6 +176,17 @@ def _wrap_property_value(key: str, value: float):
     return value
 
 
+def _set_branch_param(branches, key: str, value) -> None:
+    """Set a parameter on a BranchFunction, handling nested struct properties."""
+    wrapped = _wrap_property_value(key, value)
+    if key in _NESTED_PROPERTY_MAP:
+        struct_name, field_name = _NESTED_PROPERTY_MAP[key]
+        struct = getattr(branches, struct_name)
+        setattr(struct, field_name, wrapped)
+    else:
+        setattr(branches, key, wrapped)
+
+
 def apply_preset(branches, preset_name: str) -> None:
     """Apply a preset's parameters to a BranchFunction instance.
 
@@ -170,7 +196,7 @@ def apply_preset(branches, preset_name: str) -> None:
     """
     # Apply defaults first
     for key, value in _DEFAULT_BRANCH_PARAMS.items():
-        setattr(branches, key, _wrap_property_value(key, value))
+        _set_branch_param(branches, key, value)
 
     # Get preset-specific or random parameters
     if preset_name == "RANDOM":
@@ -181,7 +207,7 @@ def apply_preset(branches, preset_name: str) -> None:
 
     # Apply preset parameters
     for key, value in params.items():
-        setattr(branches, key, _wrap_property_value(key, value))
+        _set_branch_param(branches, key, value)
 
 
 def apply_trunk_preset(trunk, preset_name: str) -> None:
