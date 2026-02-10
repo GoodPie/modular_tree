@@ -23,10 +23,17 @@ A procedural tree generator addon for Blender using a node-based workflow.
 
 ## Requirements
 
-- Blender 5.0 or later
-  - This is simply because I haven't tested it on earlier versions
+- Blender 4.3 or later
 
 ## Installation
+
+### Blender Extensions
+
+Find the extension on the Blender extension platform
+
+https://extensions.blender.org/add-ons/modular-tree/
+
+### Local Installation
 
 1. Download the latest release for your OS from [Releases](https://github.com/GoodPie/modular_tree/releases)
 2. In Blender: Edit -> Preferences -> Add-ons -> Install
