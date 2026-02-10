@@ -2,12 +2,12 @@ schema_version = "1.0.0"
 
 id = "modular_tree"
 name = "Modular Tree"
-version = "5.3.2"
+version = "5.3.3"
 website = "https://github.com/GoodPie/modular_tree"
 tagline = "Procedural node based 3D tree generation"
 maintainer = "GoodPie <brandynbb96@gmail.com>"
 type = "add-on"
-blender_version_min = "5.0.0"
+blender_version_min = "4.3.0"
 license = ["SPDX:GPL-3.0-or-later"]
 copyright = ["2021 MaximeHerpin", "2026 Brandyn Britton"]
 tags = ["Mesh", "Add Curve"]

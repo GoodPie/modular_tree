@@ -1,6 +1,6 @@
 [project]
 name = "modular-tree"
-version = "5.3.2"
+version = "5.3.3"
 requires-python = ">=3.11"
 
 [dependency-groups]
