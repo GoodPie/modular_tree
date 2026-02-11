@@ -129,10 +129,13 @@ def create_default_leaf_object() -> Object:
 def create_leaves_distribution_v2_node_group() -> NodeTree:
     """Create v2 geometry nodes for distributing leaves on tree branches.
 
-    Extends v1 with phyllotaxis support:
+    Extends v1 with:
     - Distribution Mode input (0=Random, 1=Phyllotactic)
     - Phyllotaxis Angle input (default 137.5, scales the pre-computed attribute)
-    - Reads phyllotaxis_angle attribute from tree mesh for spiral rotation
+    - LOD switching (LOD 1 Object, LOD 1 Distance)
+    - Distance-based culling (Cull Distance)
+    - Billboard rotation (Billboard Mode: 0=Off, 1=Axial, 2=Camera-Facing)
+    - Camera input for distance computation and billboard orientation
 
     Returns:
         The created node group.
@@ -196,6 +199,30 @@ def create_leaves_distribution_v2_node_group() -> NodeTree:
     phyllotaxis_socket.default_value = 137.5
     phyllotaxis_socket.min_value = 0.0
     phyllotaxis_socket.max_value = 360.0
+
+    # --- LOD/Billboard sockets ---
+    ng.interface.new_socket(name="LOD 1 Object", in_out="INPUT", socket_type="NodeSocketObject")
+
+    lod1_dist_socket = ng.interface.new_socket(
+        name="LOD 1 Distance", in_out="INPUT", socket_type="NodeSocketFloat"
+    )
+    lod1_dist_socket.default_value = 20.0
+    lod1_dist_socket.min_value = 0.0
+
+    cull_dist_socket = ng.interface.new_socket(
+        name="Cull Distance", in_out="INPUT", socket_type="NodeSocketFloat"
+    )
+    cull_dist_socket.default_value = 100.0
+    cull_dist_socket.min_value = 0.0
+
+    billboard_mode_socket = ng.interface.new_socket(
+        name="Billboard Mode", in_out="INPUT", socket_type="NodeSocketInt"
+    )
+    billboard_mode_socket.default_value = 0
+    billboard_mode_socket.min_value = 0
+    billboard_mode_socket.max_value = 2
+
+    ng.interface.new_socket(name="Camera", in_out="INPUT", socket_type="NodeSocketObject")
 
     # Output
     ng.interface.new_socket(name="Geometry", in_out="OUTPUT", socket_type="NodeSocketGeometry")
@@ -400,30 +427,181 @@ def create_leaves_distribution_v2_node_group() -> NodeTree:
     links.new(group_input.outputs["Scale"], final_scale.inputs[1])
 
     # =========================================================================
-    # Instancing + output (same as v1)
+    # Camera + distance computation (LOD/Billboard/Cull)
     # =========================================================================
+
+    # Camera Object Info
+    camera_info = nodes.new("GeometryNodeObjectInfo")
+    camera_info.location = (550, NODE_SPACING_Y * 3)
+    camera_info.transform_space = "ORIGINAL"
+    links.new(group_input.outputs["Camera"], camera_info.inputs["Object"])
+
+    # Point position (for distance to camera)
+    position_leaf = nodes.new("GeometryNodeInputPosition")
+    position_leaf.location = (550, NODE_SPACING_Y * 1.5)
+
+    # Direction: camera_pos - point_pos
+    subtract_cam = nodes.new("ShaderNodeVectorMath")
+    subtract_cam.location = (700, NODE_SPACING_Y * 2)
+    subtract_cam.operation = "SUBTRACT"
+    links.new(camera_info.outputs["Location"], subtract_cam.inputs[0])
+    links.new(position_leaf.outputs["Position"], subtract_cam.inputs[1])
+
+    # Distance to camera (scalar)
+    distance_cam = nodes.new("ShaderNodeVectorMath")
+    distance_cam.location = (850, NODE_SPACING_Y * 2)
+    distance_cam.operation = "LENGTH"
+    links.new(subtract_cam.outputs["Vector"], distance_cam.inputs[0])
+
+    # Normalize direction for billboard rotation
+    normalize_cam = nodes.new("ShaderNodeVectorMath")
+    normalize_cam.location = (850, NODE_SPACING_Y * 3.5)
+    normalize_cam.operation = "NORMALIZE"
+    links.new(subtract_cam.outputs["Vector"], normalize_cam.inputs[0])
+
+    # =========================================================================
+    # Cull: Delete points beyond cull distance
+    # =========================================================================
+
+    compare_cull = nodes.new("FunctionNodeCompare")
+    compare_cull.location = (1000, NODE_SPACING_Y * 2)
+    compare_cull.data_type = "FLOAT"
+    compare_cull.operation = "GREATER_THAN"
+    links.new(distance_cam.outputs["Value"], compare_cull.inputs["A"])
+    links.new(group_input.outputs["Cull Distance"], compare_cull.inputs["B"])
+
+    delete_cull = nodes.new("GeometryNodeDeleteGeometry")
+    delete_cull.location = (1000, 0)
+    delete_cull.domain = "POINT"
+    delete_cull.mode = "ALL"
+    links.new(delete_geo.outputs["Geometry"], delete_cull.inputs["Geometry"])
+    links.new(compare_cull.outputs["Result"], delete_cull.inputs["Selection"])
+
+    # =========================================================================
+    # LOD selection: LOD0 (close) vs LOD1 (far)
+    # =========================================================================
+
+    compare_lod = nodes.new("FunctionNodeCompare")
+    compare_lod.location = (1000, NODE_SPACING_Y * 3.5)
+    compare_lod.data_type = "FLOAT"
+    compare_lod.operation = "GREATER_THAN"
+    links.new(distance_cam.outputs["Value"], compare_lod.inputs["A"])
+    links.new(group_input.outputs["LOD 1 Distance"], compare_lod.inputs["B"])
+
+    # NOT lod1_selection = lod0_selection
+    bool_not_lod = nodes.new("FunctionNodeBooleanMath")
+    bool_not_lod.location = (1150, NODE_SPACING_Y * 3)
+    bool_not_lod.operation = "NOT"
+    links.new(compare_lod.outputs["Result"], bool_not_lod.inputs[0])
+
+    # =========================================================================
+    # Billboard rotation
+    # =========================================================================
+
+    # Camera-facing: align Z axis toward camera direction
+    align_billboard_camera = nodes.new("FunctionNodeAlignEulerToVector")
+    align_billboard_camera.location = (1000, NODE_SPACING_Y * 6)
+    align_billboard_camera.axis = "Z"
+    links.new(normalize_cam.outputs["Vector"], align_billboard_camera.inputs["Vector"])
+
+    # Axial: branch-aligned Z, rotate X toward camera
+    align_billboard_axial = nodes.new("FunctionNodeAlignEulerToVector")
+    align_billboard_axial.location = (1000, NODE_SPACING_Y * 5)
+    align_billboard_axial.axis = "X"
+    align_billboard_axial.pivot_axis = "Z"
+    links.new(align_euler.outputs["Rotation"], align_billboard_axial.inputs["Rotation"])
+    links.new(normalize_cam.outputs["Vector"], align_billboard_axial.inputs["Vector"])
+
+    # Switch 1: Billboard Mode > 0 → axial, else existing rotation
+    compare_billboard_1 = nodes.new("FunctionNodeCompare")
+    compare_billboard_1.location = (1150, NODE_SPACING_Y * 7)
+    compare_billboard_1.data_type = "INT"
+    compare_billboard_1.operation = "GREATER_THAN"
+    links.new(group_input.outputs["Billboard Mode"], compare_billboard_1.inputs["A"])
+    compare_billboard_1.inputs["B"].default_value = 0
+
+    switch_billboard_1 = nodes.new("GeometryNodeSwitch")
+    switch_billboard_1.location = (1300, NODE_SPACING_Y * 5)
+    switch_billboard_1.input_type = "ROTATION"
+    links.new(compare_billboard_1.outputs["Result"], switch_billboard_1.inputs["Switch"])
+    links.new(rotate_euler.outputs["Rotation"], switch_billboard_1.inputs["False"])
+    links.new(align_billboard_axial.outputs["Rotation"], switch_billboard_1.inputs["True"])
+
+    # Switch 2: Billboard Mode > 1 → camera-facing, else axial/existing
+    compare_billboard_2 = nodes.new("FunctionNodeCompare")
+    compare_billboard_2.location = (1300, NODE_SPACING_Y * 7)
+    compare_billboard_2.data_type = "INT"
+    compare_billboard_2.operation = "GREATER_THAN"
+    links.new(group_input.outputs["Billboard Mode"], compare_billboard_2.inputs["A"])
+    compare_billboard_2.inputs["B"].default_value = 1
+
+    switch_billboard_final = nodes.new("GeometryNodeSwitch")
+    switch_billboard_final.location = (1450, NODE_SPACING_Y * 5.5)
+    switch_billboard_final.input_type = "ROTATION"
+    links.new(compare_billboard_2.outputs["Result"], switch_billboard_final.inputs["Switch"])
+    links.new(switch_billboard_1.outputs["Output"], switch_billboard_final.inputs["False"])
+    links.new(align_billboard_camera.outputs["Rotation"], switch_billboard_final.inputs["True"])
+
+    # =========================================================================
+    # LOD instancing
+    # =========================================================================
+
+    # LOD 0: Full detail leaf object
     object_info = nodes.new("GeometryNodeObjectInfo")
-    object_info.location = (_COL_ROTATE, NODE_SPACING_Y * 0.7)
+    object_info.location = (1400, NODE_SPACING_Y * 0.7)
     object_info.transform_space = "RELATIVE"
     links.new(group_input.outputs["Leaf Object"], object_info.inputs["Object"])
 
-    instance = nodes.new("GeometryNodeInstanceOnPoints")
-    instance.location = (_COL_INSTANCE, 0)
-    links.new(delete_geo.outputs["Geometry"], instance.inputs["Points"])
-    links.new(object_info.outputs["Geometry"], instance.inputs["Instance"])
-    links.new(rotate_euler.outputs["Rotation"], instance.inputs["Rotation"])
-    links.new(final_scale.outputs["Value"], instance.inputs["Scale"])
+    # Instance LOD 0 on close points
+    instance_lod0 = nodes.new("GeometryNodeInstanceOnPoints")
+    instance_lod0.location = (1550, 0)
+    links.new(delete_cull.outputs["Geometry"], instance_lod0.inputs["Points"])
+    links.new(object_info.outputs["Geometry"], instance_lod0.inputs["Instance"])
+    links.new(switch_billboard_final.outputs["Output"], instance_lod0.inputs["Rotation"])
+    links.new(final_scale.outputs["Value"], instance_lod0.inputs["Scale"])
+    links.new(bool_not_lod.outputs["Boolean"], instance_lod0.inputs["Selection"])
 
-    realize = nodes.new("GeometryNodeRealizeInstances")
-    realize.location = (_COL_REALIZE, 0)
-    links.new(instance.outputs["Instances"], realize.inputs["Geometry"])
+    # LOD 1: Simplified card object
+    lod1_object_info = nodes.new("GeometryNodeObjectInfo")
+    lod1_object_info.location = (1400, -NODE_SPACING_Y * 2.5)
+    lod1_object_info.transform_space = "RELATIVE"
+    links.new(group_input.outputs["LOD 1 Object"], lod1_object_info.inputs["Object"])
 
-    join = nodes.new("GeometryNodeJoinGeometry")
-    join.location = (_COL_JOIN, 0)
-    links.new(group_input.outputs["Geometry"], join.inputs[0])
-    links.new(realize.outputs["Geometry"], join.inputs[0])
+    # Instance LOD 1 on far points
+    instance_lod1 = nodes.new("GeometryNodeInstanceOnPoints")
+    instance_lod1.location = (1550, -NODE_SPACING_Y * 3.5)
+    links.new(delete_cull.outputs["Geometry"], instance_lod1.inputs["Points"])
+    links.new(lod1_object_info.outputs["Geometry"], instance_lod1.inputs["Instance"])
+    links.new(switch_billboard_final.outputs["Output"], instance_lod1.inputs["Rotation"])
+    links.new(final_scale.outputs["Value"], instance_lod1.inputs["Scale"])
+    links.new(compare_lod.outputs["Result"], instance_lod1.inputs["Selection"])
 
-    links.new(join.outputs["Geometry"], group_output.inputs["Geometry"])
+    # =========================================================================
+    # Realize + join
+    # =========================================================================
+
+    realize_lod0 = nodes.new("GeometryNodeRealizeInstances")
+    realize_lod0.location = (1750, 0)
+    links.new(instance_lod0.outputs["Instances"], realize_lod0.inputs["Geometry"])
+
+    realize_lod1 = nodes.new("GeometryNodeRealizeInstances")
+    realize_lod1.location = (1750, -NODE_SPACING_Y * 3.5)
+    links.new(instance_lod1.outputs["Instances"], realize_lod1.inputs["Geometry"])
+
+    # Join LOD0 + LOD1 leaves
+    join_leaves = nodes.new("GeometryNodeJoinGeometry")
+    join_leaves.location = (1950, -NODE_SPACING_Y)
+    links.new(realize_lod0.outputs["Geometry"], join_leaves.inputs[0])
+    links.new(realize_lod1.outputs["Geometry"], join_leaves.inputs[0])
+
+    # Join leaves + tree geometry
+    join_all = nodes.new("GeometryNodeJoinGeometry")
+    join_all.location = (2100, 0)
+    links.new(group_input.outputs["Geometry"], join_all.inputs[0])
+    links.new(join_leaves.outputs["Geometry"], join_all.inputs[0])
+
+    group_output.location = (2300, 0)
+    links.new(join_all.outputs["Geometry"], group_output.inputs["Geometry"])
 
     return ng
 
@@ -477,6 +655,11 @@ def distribute_leaves(
     leaf_object: Object | None = None,
     distribution_mode: int = 0,
     phyllotaxis_angle: float = 137.5,
+    lod_1_object: Object | None = None,
+    billboard_mode: str = "OFF",
+    lod_1_distance: float = 20.0,
+    cull_distance: float = 100.0,
+    camera: Object | None = None,
 ) -> None:
     """Add leaves distribution modifier to a tree object.
 
@@ -486,7 +669,11 @@ def distribute_leaves(
         leaf_object: Optional custom leaf object. If None, creates a default quad.
         distribution_mode: 0=Random (v1 behavior), 1=Phyllotactic.
         phyllotaxis_angle: Divergence angle in degrees (default 137.5 = golden angle).
-            Only used when distribution_mode=1.
+        lod_1_object: Optional simplified leaf for LOD 1 (card mesh).
+        billboard_mode: "OFF", "AXIAL", or "CAMERA" billboard rotation mode.
+        lod_1_distance: Distance threshold for LOD 1 switching.
+        cull_distance: Distance beyond which leaves are culled.
+        camera: Camera object for distance-based LOD and billboard rotation.
 
     Raises:
         ValueError: If the object is missing required vertex attributes.
@@ -538,3 +725,30 @@ def distribute_leaves(
         socket_id = _find_socket_identifier(node_group, "Phyllotaxis Angle")
         if socket_id is not None:
             modifier[socket_id] = phyllotaxis_angle
+
+    # Set LOD/Billboard parameters
+    if lod_1_object is not None:
+        socket_id = _find_socket_identifier(node_group, "LOD 1 Object")
+        if socket_id is not None:
+            modifier[socket_id] = lod_1_object
+
+    if lod_1_distance != 20.0:
+        socket_id = _find_socket_identifier(node_group, "LOD 1 Distance")
+        if socket_id is not None:
+            modifier[socket_id] = lod_1_distance
+
+    if cull_distance != 100.0:
+        socket_id = _find_socket_identifier(node_group, "Cull Distance")
+        if socket_id is not None:
+            modifier[socket_id] = cull_distance
+
+    if billboard_mode != "OFF":
+        _billboard_mode_map = {"OFF": 0, "AXIAL": 1, "CAMERA": 2}
+        socket_id = _find_socket_identifier(node_group, "Billboard Mode")
+        if socket_id is not None:
+            modifier[socket_id] = _billboard_mode_map[billboard_mode]
+
+    if camera is not None:
+        socket_id = _find_socket_identifier(node_group, "Camera")
+        if socket_id is not None:
+            modifier[socket_id] = camera

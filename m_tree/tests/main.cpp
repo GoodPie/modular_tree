@@ -12,6 +12,7 @@
 #include "source/leaf/LeafShapeGenerator.hpp"
 #include "source/leaf/LeafPresets.hpp"
 #include "source/leaf/VenationGenerator.hpp"
+#include "source/leaf/LeafLODGenerator.hpp"
 
 
 using namespace Mtree;
@@ -657,6 +658,207 @@ TEST(venation_no_crash_small_contour)
 
 	auto veins = gen.generate_veins(contour);
 	ASSERT_EQ(static_cast<int>(veins.size()), 0);
+}
+
+// =====================================================================
+// LeafLODGenerator tests
+// =====================================================================
+
+TEST(lod_generate_card_empty_source)
+{
+	// Source mesh with fewer than 3 vertices should return empty mesh
+	Mesh empty_source;
+	LeafLODGenerator lod;
+
+	// 0 vertices
+	Mesh card0 = lod.generate_card(empty_source);
+	ASSERT_EQ(static_cast<int>(card0.vertices.size()), 0);
+	ASSERT_EQ(static_cast<int>(card0.polygons.size()), 0);
+
+	// 1 vertex
+	Mesh one_vert;
+	one_vert.vertices.push_back(Vector3(0.0f, 0.0f, 0.0f));
+	Mesh card1 = lod.generate_card(one_vert);
+	ASSERT_EQ(static_cast<int>(card1.vertices.size()), 0);
+	ASSERT_EQ(static_cast<int>(card1.polygons.size()), 0);
+
+	// 2 vertices
+	Mesh two_vert;
+	two_vert.vertices.push_back(Vector3(0.0f, 0.0f, 0.0f));
+	two_vert.vertices.push_back(Vector3(1.0f, 0.0f, 0.0f));
+	Mesh card2 = lod.generate_card(two_vert);
+	ASSERT_EQ(static_cast<int>(card2.vertices.size()), 0);
+	ASSERT_EQ(static_cast<int>(card2.polygons.size()), 0);
+}
+
+TEST(lod_generate_card_4_vertices_2_triangles)
+{
+	// Create a simple leaf mesh as source
+	LeafShapeGenerator gen;
+	gen.contour_resolution = 32;
+	Mesh source = gen.generate();
+	ASSERT_GT(static_cast<int>(source.vertices.size()), 3);
+
+	LeafLODGenerator lod;
+	Mesh card = lod.generate_card(source);
+
+	// Card must be exactly 4 vertices
+	ASSERT_EQ(static_cast<int>(card.vertices.size()), 4);
+
+	// Card must have exactly 2 triangles (stored as degenerate quads)
+	ASSERT_EQ(static_cast<int>(card.polygons.size()), 2);
+
+	// All polygon indices must be valid
+	for (const auto& poly : card.polygons)
+	{
+		for (int j = 0; j < 4; ++j)
+		{
+			ASSERT_GE(poly[j], 0);
+			ASSERT_TRUE(poly[j] < 4);
+		}
+	}
+}
+
+TEST(lod_generate_card_matches_bounding_rect)
+{
+	LeafShapeGenerator gen;
+	gen.contour_resolution = 32;
+	Mesh source = gen.generate();
+
+	// Compute bounding box of source mesh
+	float min_x = 1e10f, max_x = -1e10f;
+	float min_y = 1e10f, max_y = -1e10f;
+	for (const auto& v : source.vertices)
+	{
+		if (v.x() < min_x) min_x = v.x();
+		if (v.x() > max_x) max_x = v.x();
+		if (v.y() < min_y) min_y = v.y();
+		if (v.y() > max_y) max_y = v.y();
+	}
+
+	LeafLODGenerator lod;
+	Mesh card = lod.generate_card(source);
+
+	// Card vertices should span the bounding rectangle (within tolerance)
+	float card_min_x = 1e10f, card_max_x = -1e10f;
+	float card_min_y = 1e10f, card_max_y = -1e10f;
+	for (const auto& v : card.vertices)
+	{
+		if (v.x() < card_min_x) card_min_x = v.x();
+		if (v.x() > card_max_x) card_max_x = v.x();
+		if (v.y() < card_min_y) card_min_y = v.y();
+		if (v.y() > card_max_y) card_max_y = v.y();
+	}
+
+	float tol = 0.01f;
+	ASSERT_TRUE(std::abs(card_min_x - min_x) < tol);
+	ASSERT_TRUE(std::abs(card_max_x - max_x) < tol);
+	ASSERT_TRUE(std::abs(card_min_y - min_y) < tol);
+	ASSERT_TRUE(std::abs(card_max_y - max_y) < tol);
+}
+
+TEST(lod_generate_card_uvs_0_1)
+{
+	LeafShapeGenerator gen;
+	Mesh source = gen.generate();
+
+	LeafLODGenerator lod;
+	Mesh card = lod.generate_card(source);
+
+	// Card must have UVs
+	ASSERT_EQ(static_cast<int>(card.uvs.size()), 4);
+
+	// UVs should span 0-1 range
+	float min_u = 1e10f, max_u = -1e10f;
+	float min_v = 1e10f, max_v = -1e10f;
+	for (const auto& uv : card.uvs)
+	{
+		ASSERT_GE(uv.x(), 0.0f);
+		ASSERT_LE(uv.x(), 1.0f);
+		ASSERT_GE(uv.y(), 0.0f);
+		ASSERT_LE(uv.y(), 1.0f);
+		if (uv.x() < min_u) min_u = uv.x();
+		if (uv.x() > max_u) max_u = uv.x();
+		if (uv.y() < min_v) min_v = uv.y();
+		if (uv.y() > max_v) max_v = uv.y();
+	}
+
+	// UVs should cover the full 0-1 range
+	ASSERT_TRUE(std::abs(min_u - 0.0f) < 0.01f);
+	ASSERT_TRUE(std::abs(max_u - 1.0f) < 0.01f);
+	ASSERT_TRUE(std::abs(min_v - 0.0f) < 0.01f);
+	ASSERT_TRUE(std::abs(max_v - 1.0f) < 0.01f);
+}
+
+TEST(lod_generate_billboard_cloud_num_planes)
+{
+	std::vector<Vector3> positions = {
+	    Vector3(0.0f, 0.0f, 0.0f),
+	    Vector3(1.0f, 0.0f, 0.0f),
+	    Vector3(0.0f, 1.0f, 0.0f),
+	};
+
+	LeafLODGenerator lod;
+
+	// 3 planes
+	Mesh cloud3 = lod.generate_billboard_cloud(positions, 3);
+	ASSERT_EQ(static_cast<int>(cloud3.vertices.size()), 3 * 4); // 4 verts per plane
+	ASSERT_EQ(static_cast<int>(cloud3.polygons.size()), 3 * 2); // 2 tris per plane
+
+	// 5 planes
+	Mesh cloud5 = lod.generate_billboard_cloud(positions, 5);
+	ASSERT_EQ(static_cast<int>(cloud5.vertices.size()), 5 * 4);
+	ASSERT_EQ(static_cast<int>(cloud5.polygons.size()), 5 * 2);
+}
+
+TEST(lod_billboard_cloud_empty_positions)
+{
+	std::vector<Vector3> positions;
+	LeafLODGenerator lod;
+
+	Mesh cloud = lod.generate_billboard_cloud(positions, 3);
+	ASSERT_EQ(static_cast<int>(cloud.vertices.size()), 0);
+	ASSERT_EQ(static_cast<int>(cloud.polygons.size()), 0);
+}
+
+TEST(lod_billboard_cloud_zero_planes)
+{
+	std::vector<Vector3> positions = {
+	    Vector3(0.0f, 0.0f, 0.0f),
+	    Vector3(1.0f, 0.0f, 0.0f),
+	};
+	LeafLODGenerator lod;
+
+	Mesh cloud = lod.generate_billboard_cloud(positions, 0);
+	ASSERT_EQ(static_cast<int>(cloud.vertices.size()), 0);
+	ASSERT_EQ(static_cast<int>(cloud.polygons.size()), 0);
+}
+
+TEST(lod_impostor_view_directions_count)
+{
+	LeafLODGenerator lod;
+
+	auto dirs_8 = lod.get_impostor_view_directions(8);
+	ASSERT_EQ(static_cast<int>(dirs_8.size()), 8 * 8);
+
+	auto dirs_12 = lod.get_impostor_view_directions(12);
+	ASSERT_EQ(static_cast<int>(dirs_12.size()), 12 * 12);
+}
+
+TEST(lod_impostor_view_directions_upper_hemisphere)
+{
+	LeafLODGenerator lod;
+	auto dirs = lod.get_impostor_view_directions(8);
+
+	for (const auto& d : dirs)
+	{
+		// All directions should be on the upper hemisphere (Z >= 0)
+		ASSERT_GE(d.z(), 0.0f);
+
+		// All directions should be approximately unit vectors
+		float len = d.norm();
+		ASSERT_TRUE(std::abs(len - 1.0f) < 0.01f);
+	}
 }
 
 int main()

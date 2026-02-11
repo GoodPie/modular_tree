@@ -55,6 +55,27 @@ class AddLeavesModifier(bpy.types.Operator):
         min=0.0,
         max=360.0,
     )
+    billboard_mode: bpy.props.EnumProperty(
+        name="Billboard Mode",
+        items=[
+            ("OFF", "Off", "No billboard rotation"),
+            ("AXIAL", "Axial", "Rotate around branch axis toward camera"),
+            ("CAMERA", "Camera-Facing", "Fully face the camera"),
+        ],
+        default="OFF",
+    )
+    lod_1_distance: bpy.props.FloatProperty(
+        name="LOD 1 Distance",
+        description="Distance threshold for LOD 1 switching",
+        default=20.0,
+        min=0.0,
+    )
+    cull_distance: bpy.props.FloatProperty(
+        name="Cull Distance",
+        description="Distance beyond which leaves are removed",
+        default=100.0,
+        min=0.0,
+    )
 
     def execute(self, context):
         ob = bpy.data.objects.get(self.object_id)
@@ -63,6 +84,10 @@ class AddLeavesModifier(bpy.types.Operator):
                 ob,
                 distribution_mode=self.distribution_mode,
                 phyllotaxis_angle=self.phyllotaxis_angle,
+                billboard_mode=self.billboard_mode,
+                lod_1_distance=self.lod_1_distance,
+                cull_distance=self.cull_distance,
+                camera=bpy.context.scene.camera,
             )
         return {"FINISHED"}
 

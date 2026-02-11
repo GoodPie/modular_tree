@@ -17,6 +17,7 @@
 #include "source/meshers/manifold_mesher/ManifoldMesher.hpp"
 #include "source/leaf/LeafPresets.hpp"
 #include "source/leaf/LeafShapeGenerator.hpp"
+#include "source/leaf/LeafLODGenerator.hpp"
 
 
 using namespace Mtree;
@@ -87,6 +88,14 @@ PYBIND11_MODULE(m_tree, m) {
         .def_readwrite("contour_resolution", &LeafShapeGenerator::contour_resolution)
         .def_readwrite("seed", &LeafShapeGenerator::seed)
         .def("generate", &LeafShapeGenerator::generate);
+
+    py::class_<LeafLODGenerator>(m, "LeafLODGenerator")
+        .def(py::init<>())
+        .def("generate_card", &LeafLODGenerator::generate_card)
+        .def("generate_billboard_cloud", &LeafLODGenerator::generate_billboard_cloud,
+             py::arg("positions"), py::arg("num_planes") = 3)
+        .def("get_impostor_view_directions", &LeafLODGenerator::get_impostor_view_directions,
+             py::arg("resolution") = 12);
 
     py::enum_<CrownShape>(m, "CrownShape")
         .value("Conical", CrownShape::Conical)
