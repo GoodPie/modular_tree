@@ -3,7 +3,6 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 
 #include "source/mesh/Mesh.hpp"
@@ -16,6 +15,7 @@
 #include "source/tree_functions/PipeRadiusFunction.hpp"
 #include "source/meshers/splines_mesher/BasicMesher.hpp"
 #include "source/meshers/manifold_mesher/ManifoldMesher.hpp"
+#include "source/leaf/LeafPresets.hpp"
 
 
 using namespace Mtree;
@@ -23,6 +23,39 @@ namespace py = pybind11;
 
 
 PYBIND11_MODULE(m_tree, m) {
+
+    py::enum_<MarginType>(m, "MarginType")
+        .value("Entire", MarginType::Entire)
+        .value("Serrate", MarginType::Serrate)
+        .value("Dentate", MarginType::Dentate)
+        .value("Crenate", MarginType::Crenate)
+        .value("Lobed", MarginType::Lobed);
+
+    py::enum_<VenationType>(m, "VenationType")
+        .value("Open", VenationType::Open)
+        .value("Closed", VenationType::Closed);
+
+    py::class_<LeafPreset, std::shared_ptr<LeafPreset>>(m, "LeafPreset")
+        .def(py::init<>())
+        .def_readwrite("name", &LeafPreset::name)
+        .def_readwrite("m", &LeafPreset::m)
+        .def_readwrite("a", &LeafPreset::a)
+        .def_readwrite("b", &LeafPreset::b)
+        .def_readwrite("n1", &LeafPreset::n1)
+        .def_readwrite("n2", &LeafPreset::n2)
+        .def_readwrite("n3", &LeafPreset::n3)
+        .def_readwrite("aspect_ratio", &LeafPreset::aspect_ratio)
+        .def_readwrite("margin_type", &LeafPreset::margin_type)
+        .def_readwrite("tooth_count", &LeafPreset::tooth_count)
+        .def_readwrite("tooth_depth", &LeafPreset::tooth_depth)
+        .def_readwrite("tooth_sharpness", &LeafPreset::tooth_sharpness)
+        .def_readwrite("enable_venation", &LeafPreset::enable_venation)
+        .def_readwrite("venation_type", &LeafPreset::venation_type)
+        .def_readwrite("vein_density", &LeafPreset::vein_density)
+        .def_readwrite("kill_distance", &LeafPreset::kill_distance)
+        .def_readwrite("midrib_curvature", &LeafPreset::midrib_curvature)
+        .def_readwrite("cross_curvature", &LeafPreset::cross_curvature)
+        .def_readwrite("edge_curl", &LeafPreset::edge_curl);
 
     py::enum_<CrownShape>(m, "CrownShape")
         .value("Conical", CrownShape::Conical)
