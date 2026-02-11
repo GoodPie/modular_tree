@@ -403,6 +403,7 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
             layout.label(text=f"Object: {self.leaf_object}")
 
         layout.prop(self, "margin_type", text="Margin")
+        layout.prop(self, "enable_venation", text="Venation")
 
     def draw_inspector(self, context, layout):
         """Full inspector panel (N key)."""

@@ -168,7 +168,7 @@ TEST(leaf_margin_lobed_modifies_contour)
 	ASSERT_GT(static_cast<int>(mesh.polygons.size()), 0);
 }
 
-TEST(leaf_ear_clipping_valid_triangulation)
+TEST(leaf_valid_triangulation)
 {
 	LeafShapeGenerator gen;
 	gen.contour_resolution = 32;

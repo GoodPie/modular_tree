@@ -3,7 +3,6 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
-#include <numeric>
 
 namespace Mtree
 {
@@ -149,135 +148,86 @@ std::vector<Vector2> LeafShapeGenerator::apply_margin(const std::vector<Vector2>
 	return result;
 }
 
-float LeafShapeGenerator::cross2d(const Vector2& o, const Vector2& a, const Vector2& b) const
-{
-	return (a.x() - o.x()) * (b.y() - o.y()) - (a.y() - o.y()) * (b.x() - o.x());
-}
-
-bool LeafShapeGenerator::point_in_triangle(const Vector2& p, const Vector2& a, const Vector2& b,
-                                           const Vector2& c) const
-{
-	float d1 = cross2d(p, a, b);
-	float d2 = cross2d(p, b, c);
-	float d3 = cross2d(p, c, a);
-
-	bool has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
-	bool has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
-
-	return !(has_neg && has_pos);
-}
-
-bool LeafShapeGenerator::is_ear(const std::vector<Vector2>& polygon, int prev, int curr,
-                                int next) const
-{
-	const Vector2& a = polygon[prev];
-	const Vector2& b = polygon[curr];
-	const Vector2& c = polygon[next];
-
-	// Must be convex (counter-clockwise)
-	if (cross2d(a, b, c) <= 0.0f)
-		return false;
-
-	// No other vertices inside this triangle
-	for (size_t i = 0; i < polygon.size(); ++i)
-	{
-		int ii = static_cast<int>(i);
-		if (ii == prev || ii == curr || ii == next)
-			continue;
-		if (point_in_triangle(polygon[i], a, b, c))
-			return false;
-	}
-
-	return true;
-}
-
 Mesh LeafShapeGenerator::triangulate(const std::vector<Vector2>& contour)
 {
 	Mesh mesh;
-
-	// Add vertices to mesh (Z = 0 for flat leaf)
-	for (const auto& pt : contour)
-	{
-		mesh.vertices.push_back(Vector3(pt.x(), pt.y(), 0.0f));
-	}
-
-	// Ear clipping triangulation
-	std::vector<int> indices(contour.size());
-	std::iota(indices.begin(), indices.end(), 0);
+	int n = static_cast<int>(contour.size());
 
 	// Ensure counter-clockwise winding
 	float signed_area = 0.0f;
-	for (size_t i = 0; i < contour.size(); ++i)
+	for (int i = 0; i < n; ++i)
 	{
-		size_t next = (i + 1) % contour.size();
+		int next = (i + 1) % n;
 		signed_area += contour[i].x() * contour[next].y();
 		signed_area -= contour[next].x() * contour[i].y();
 	}
-	if (signed_area < 0.0f)
+	bool ccw = signed_area >= 0.0f;
+
+	// Ring 0 = boundary vertices (in CCW order)
+	for (int i = 0; i < n; ++i)
 	{
-		std::reverse(indices.begin(), indices.end());
+		int idx = ccw ? i : (n - 1 - i);
+		const auto& pt = contour[idx];
+		mesh.vertices.push_back(Vector3(pt.x(), pt.y(), 0.0f));
 	}
 
-	// Build polygon list for ear clipping
-	std::vector<Vector2> poly;
-	poly.reserve(indices.size());
-	for (int idx : indices)
+	// Compute centroid
+	Vector2 centroid(0.0f, 0.0f);
+	for (const auto& pt : contour)
 	{
-		poly.push_back(contour[idx]);
+		centroid += pt;
+	}
+	centroid /= static_cast<float>(n);
+
+	// Number of inner rings
+	int num_rings = std::clamp(contour_resolution / 16, 1, 8);
+
+	// Generate inner ring vertices (rings 1..num_rings), each ring has n vertices
+	for (int r = 1; r <= num_rings; ++r)
+	{
+		float t = static_cast<float>(r) / static_cast<float>(num_rings + 1);
+		for (int i = 0; i < n; ++i)
+		{
+			int idx = ccw ? i : (n - 1 - i);
+			Vector2 pt = contour[idx] * (1.0f - t) + centroid * t;
+			mesh.vertices.push_back(Vector3(pt.x(), pt.y(), 0.0f));
+		}
 	}
 
-	while (poly.size() > 2)
+	// Add centroid as final vertex
+	int centroid_idx = static_cast<int>(mesh.vertices.size());
+	mesh.vertices.push_back(Vector3(centroid.x(), centroid.y(), 0.0f));
+
+	// Stitch adjacent rings with triangle strips
+	for (int r = 0; r < num_rings; ++r)
 	{
-		bool ear_found = false;
-		for (size_t i = 0; i < poly.size(); ++i)
+		int ring_offset_outer = r * n;
+		int ring_offset_inner = (r + 1) * n;
+		for (int i = 0; i < n; ++i)
 		{
-			int prev_idx = static_cast<int>((i == 0) ? poly.size() - 1 : i - 1);
-			int curr_idx = static_cast<int>(i);
-			int next_idx = static_cast<int>((i + 1) % poly.size());
+			int i_next = (i + 1) % n;
+			int a = ring_offset_outer + i;
+			int b = ring_offset_outer + i_next;
+			int c = ring_offset_inner + i_next;
+			int d = ring_offset_inner + i;
 
-			if (is_ear(poly, prev_idx, curr_idx, next_idx))
-			{
-				// Add triangle as degenerate quad (for compatibility with Mesh format)
-				int pi = mesh.polygons.size();
-				mesh.polygons.push_back(
-				    {indices[prev_idx], indices[curr_idx], indices[next_idx], indices[next_idx]});
-				mesh.uv_loops.push_back({0, 0, 0, 0}); // UVs computed later
-
-				// Remove ear vertex
-				poly.erase(poly.begin() + i);
-				indices.erase(indices.begin() + i);
-				ear_found = true;
-				break;
-			}
+			// Two triangles per quad, stored as degenerate quads
+			mesh.polygons.push_back({a, b, c, c});
+			mesh.uv_loops.push_back({0, 0, 0, 0});
+			mesh.polygons.push_back({a, c, d, d});
+			mesh.uv_loops.push_back({0, 0, 0, 0});
 		}
-		if (!ear_found)
-		{
-			// Fallback: centroid fan triangulation for remaining polygon
-			if (poly.size() > 2)
-			{
-				// Compute centroid of remaining polygon
-				Vector2 centroid(0.0f, 0.0f);
-				for (const auto& pt : poly)
-				{
-					centroid += pt;
-				}
-				centroid /= static_cast<float>(poly.size());
+	}
 
-				// Add centroid as a new mesh vertex
-				int centroid_idx = static_cast<int>(mesh.vertices.size());
-				mesh.vertices.push_back(Vector3(centroid.x(), centroid.y(), 0.0f));
-
-				// Fan-triangulate from centroid to each edge
-				for (size_t i = 0; i < poly.size(); ++i)
-				{
-					size_t next = (i + 1) % poly.size();
-					mesh.polygons.push_back(
-					    {indices[i], indices[next], centroid_idx, centroid_idx});
-					mesh.uv_loops.push_back({0, 0, 0, 0}); // UVs computed later
-				}
-			}
-			break; // Polygon fully consumed
-		}
+	// Close innermost ring to centroid with a fan
+	int inner_ring_offset = num_rings * n;
+	for (int i = 0; i < n; ++i)
+	{
+		int i_next = (i + 1) % n;
+		int a = inner_ring_offset + i;
+		int b = inner_ring_offset + i_next;
+		mesh.polygons.push_back({a, b, centroid_idx, centroid_idx});
+		mesh.uv_loops.push_back({0, 0, 0, 0});
 	}
 
 	return mesh;
@@ -384,7 +334,7 @@ void LeafShapeGenerator::apply_deformation(Mesh& mesh, const std::vector<Vector2
 			{
 				float dist = vein_dist.data[i];
 				float influence = std::exp(-dist * 50.0f);
-				mesh.vertices[i].z() += vein_displacement * influence * 0.05f;
+				mesh.vertices[i].z() += vein_displacement * influence * 0.5f;
 			}
 		}
 	}

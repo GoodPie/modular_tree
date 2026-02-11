@@ -292,6 +292,29 @@ class TestLeafShapeGeneratorVenation:
         distances = np.array(mesh.get_float_attribute("vein_distance"))
         assert np.all(np.isfinite(distances))
 
+    def test_vein_displacement_produces_visible_offset(self):
+        """Vein displacement with correct params produces visible Z offset (>0.05 units)."""
+        mt = get_m_tree()
+        gen = mt.LeafShapeGenerator()
+        gen.enable_venation = True
+        gen.venation_type = mt.VenationType.Open
+        gen.vein_density = 800.0
+        gen.kill_distance = 0.03
+        gen.attraction_distance = 0.08
+        gen.growth_step_size = 0.01
+        gen.vein_displacement = 0.3
+        # Zero out other deformations to isolate vein effect
+        gen.midrib_curvature = 0.0
+        gen.cross_curvature = 0.0
+        gen.edge_curl = 0.0
+        mesh = gen.generate()
+
+        verts = np.array(mesh.get_vertices()).reshape(-1, 3)
+        z_range = verts[:, 2].max() - verts[:, 2].min()
+        assert (
+            z_range > 0.05
+        ), f"Vein displacement should produce visible Z offset (>0.05), got {z_range}"
+
 
 @requires_native
 class TestLeafShapeGeneratorSurfaceDeformation:

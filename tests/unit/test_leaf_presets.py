@@ -104,6 +104,60 @@ def test_oak_venation_enabled():
     assert oak.venation["venation_type"] == 0  # OPEN
 
 
+# Expected corrected venation values (kill_distance was 100x too large before fix)
+EXPECTED_VENATION = {
+    "OAK": {
+        "kill_distance": 0.03,
+        "attraction_distance": 0.08,
+        "growth_step_size": 0.01,
+    },
+    "MAPLE": {
+        "kill_distance": 0.025,
+        "attraction_distance": 0.08,
+        "growth_step_size": 0.01,
+    },
+    "BIRCH": {
+        "kill_distance": 0.03,
+        "attraction_distance": 0.08,
+        "growth_step_size": 0.01,
+    },
+    "WILLOW": {
+        "kill_distance": 0.04,
+        "attraction_distance": 0.08,
+        "growth_step_size": 0.01,
+    },
+}
+
+
+def test_venation_kill_distance_corrected():
+    """kill_distance must be in 0.01-0.1 range (was 100x too large before fix)."""
+    for name, expected in EXPECTED_VENATION.items():
+        preset = LEAF_PRESETS[name]
+        for key, value in expected.items():
+            actual = preset.venation[key]
+            assert actual == value, f"{name}.venation.{key}: expected {value}, got {actual}"
+
+
+def test_venation_has_required_params():
+    """Venation-enabled presets must have attraction_distance and growth_step_size."""
+    for name, preset in LEAF_PRESETS.items():
+        if preset.venation.get("enable_venation"):
+            assert "attraction_distance" in preset.venation, f"{name} missing attraction_distance"
+            assert "growth_step_size" in preset.venation, f"{name} missing growth_step_size"
+
+
+def test_deformation_values():
+    """Spot-check deformation values for species with natural curvature."""
+    oak = LEAF_PRESETS["OAK"]
+    assert oak.deformation["vein_displacement"] == 0.3
+    assert oak.deformation["midrib_curvature"] == 0.1
+    assert oak.deformation["edge_curl"] == 0.05
+
+    willow = LEAF_PRESETS["WILLOW"]
+    assert willow.deformation["midrib_curvature"] == 0.2
+    assert willow.deformation["vein_displacement"] == 0.0
+
+
 def test_get_leaf_preset_items():
     """get_leaf_preset_items() should return valid Blender EnumProperty items."""
     items = get_leaf_preset_items()

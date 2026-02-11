@@ -80,6 +80,7 @@ PYBIND11_MODULE(m_tree, m) {
         .def_readwrite("venation_type", &LeafShapeGenerator::venation_type)
         .def_readwrite("vein_density", &LeafShapeGenerator::vein_density)
         .def_readwrite("kill_distance", &LeafShapeGenerator::kill_distance)
+        .def_readwrite("attraction_distance", &LeafShapeGenerator::attraction_distance)
         .def_readwrite("growth_step_size", &LeafShapeGenerator::growth_step_size)
         .def_readwrite("midrib_curvature", &LeafShapeGenerator::midrib_curvature)
         .def_readwrite("cross_curvature", &LeafShapeGenerator::cross_curvature)

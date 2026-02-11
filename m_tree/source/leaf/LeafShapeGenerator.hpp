@@ -61,10 +61,6 @@ class LeafShapeGenerator
 	BBox2D compute_contour_bbox(const std::vector<Vector2>& contour) const;
 
 	float superformula_radius(float theta, float effective_n1) const;
-	bool is_ear(const std::vector<Vector2>& polygon, int prev, int curr, int next) const;
-	bool point_in_triangle(const Vector2& p, const Vector2& a, const Vector2& b,
-	                       const Vector2& c) const;
-	float cross2d(const Vector2& o, const Vector2& a, const Vector2& b) const;
 };
 
 } // namespace Mtree
