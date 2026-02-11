@@ -330,11 +330,13 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
         leaf_mesh = bpy.data.meshes.new("leaf")
         leaf_obj = bpy.data.objects.new("leaf", leaf_mesh)
 
-        # Add to MTree_Resources collection
+        # Add to MTree_Resources collection (ensure visible for procedural leaves)
         collection = bpy.data.collections.get("MTree_Resources")
         if collection is None:
             collection = bpy.data.collections.new("MTree_Resources")
             bpy.context.scene.collection.children.link(collection)
+        collection.hide_viewport = False
+        collection.hide_render = False
         collection.objects.link(leaf_obj)
 
         return leaf_obj

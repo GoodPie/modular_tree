@@ -47,8 +47,72 @@ RESOURCE_COLLECTION_NAME = "MTree_Resources"
 LEAVES_MODIFIER_NAME = "leaves"
 
 
+def _get_or_create_resource_collection():
+    """Get or create the hidden MTree_Resources collection."""
+    collection = bpy.data.collections.get(RESOURCE_COLLECTION_NAME)
+    if collection is None:
+        collection = bpy.data.collections.new(RESOURCE_COLLECTION_NAME)
+
+        scene = (
+            bpy.context.scene
+            if bpy.context.scene
+            else (bpy.data.scenes[0] if bpy.data.scenes else None)
+        )
+        if scene is not None:
+            linked_names = [c.name for c in scene.collection.children]
+            if RESOURCE_COLLECTION_NAME not in linked_names:
+                scene.collection.children.link(collection)
+
+        collection.hide_viewport = True
+        collection.hide_render = True
+
+    return collection
+
+
+def _create_procedural_leaf() -> Object:
+    """Create a procedural leaf using LeafShapeGenerator."""
+    from ..m_tree_wrapper import lazy_m_tree as m_tree
+    from ..mesh_utils import create_leaf_mesh_from_cpp
+
+    gen = m_tree.LeafShapeGenerator()
+    cpp_mesh = gen.generate()
+
+    mesh = bpy.data.meshes.new(DEFAULT_LEAF_NAME)
+    obj = bpy.data.objects.new(DEFAULT_LEAF_NAME, mesh)
+    create_leaf_mesh_from_cpp(mesh, cpp_mesh)
+
+    collection = _get_or_create_resource_collection()
+    collection.objects.link(obj)
+    return obj
+
+
+def _create_quad_leaf() -> Object:
+    """Create a simple quad plane as fallback leaf mesh."""
+    mesh = bpy.data.meshes.new(DEFAULT_LEAF_NAME)
+
+    verts = [
+        (-0.5, 0.0, 0.0),
+        (0.5, 0.0, 0.0),
+        (0.5, 1.0, 0.0),
+        (-0.5, 1.0, 0.0),
+    ]
+    faces = [(0, 1, 2, 3)]
+    mesh.from_pydata(verts, [], faces)
+
+    uv_layer = mesh.uv_layers.new(name="UVMap")
+    uv_data = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
+    for i, uv in enumerate(uv_data):
+        uv_layer.data[i].uv = uv
+    mesh.update()
+
+    obj = bpy.data.objects.new(DEFAULT_LEAF_NAME, mesh)
+    collection = _get_or_create_resource_collection()
+    collection.objects.link(obj)
+    return obj
+
+
 def create_default_leaf_object() -> Object:
-    """Create a simple quad plane as default leaf mesh.
+    """Create a procedural leaf mesh, falling back to a quad plane.
 
     Returns:
         The created or existing default leaf object.
@@ -56,74 +120,14 @@ def create_default_leaf_object() -> Object:
     Raises:
         RuntimeError: If object creation fails.
     """
-    # Check if it already exists
     existing = bpy.data.objects.get(DEFAULT_LEAF_NAME)
     if existing is not None:
         return existing
 
-    mesh = None
-    obj = None
-    collection = None
-
     try:
-        # Create a simple quad mesh
-        mesh = bpy.data.meshes.new(DEFAULT_LEAF_NAME)
-
-        # Define vertices for a simple quad (leaf shape)
-        # Oriented so that +Z is "up" from the leaf surface
-        verts = [
-            (-0.5, 0.0, 0.0),  # bottom left
-            (0.5, 0.0, 0.0),  # bottom right
-            (0.5, 1.0, 0.0),  # top right
-            (-0.5, 1.0, 0.0),  # top left
-        ]
-        faces = [(0, 1, 2, 3)]
-
-        mesh.from_pydata(verts, [], faces)
-
-        # Add UV coordinates
-        uv_layer = mesh.uv_layers.new(name="UVMap")
-        uv_data = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
-        for i, uv in enumerate(uv_data):
-            uv_layer.data[i].uv = uv
-
-        mesh.update()
-
-        # Create object
-        obj = bpy.data.objects.new(DEFAULT_LEAF_NAME, mesh)
-
-        # Get or create a hidden collection for MTree resources
-        collection = bpy.data.collections.get(RESOURCE_COLLECTION_NAME)
-        if collection is None:
-            collection = bpy.data.collections.new(RESOURCE_COLLECTION_NAME)
-
-            # Context-safe collection linking
-            # Check if scene context is available and collection isn't already linked
-            scene = (
-                bpy.context.scene
-                if bpy.context.scene
-                else (bpy.data.scenes[0] if bpy.data.scenes else None)
-            )
-            if scene is not None:
-                linked_names = [c.name for c in scene.collection.children]
-                if RESOURCE_COLLECTION_NAME not in linked_names:
-                    scene.collection.children.link(collection)
-
-            # Hide the collection in viewport
-            collection.hide_viewport = True
-            collection.hide_render = True
-
-        collection.objects.link(obj)
-
-        return obj
-
+        return _create_procedural_leaf()
     except Exception:
-        # Clean up orphaned resources on failure
-        if obj is not None and obj.users == 0:
-            bpy.data.objects.remove(obj)
-        if mesh is not None and mesh.users == 0:
-            bpy.data.meshes.remove(mesh)
-        raise
+        return _create_quad_leaf()
 
 
 def create_leaves_distribution_v2_node_group() -> NodeTree:
