@@ -1,0 +1,341 @@
+"""Leaf shape generation node for the Mtree node editor."""
+
+from __future__ import annotations
+
+import bpy
+
+from ...m_tree_wrapper import lazy_m_tree as m_tree
+from ...mesh_utils import create_leaf_mesh_from_cpp
+from ...presets.leaf_presets import LEAF_PRESETS
+from ..base_types.node import MtreeFunctionNode, MtreeNode
+
+# Socket parameter definitions for organized access
+CONTOUR_PARAMS = ["m", "a", "b", "n1", "n2", "n3", "aspect_ratio"]
+MARGIN_PARAMS = ["tooth_count", "tooth_depth", "tooth_sharpness"]
+SURFACE_PARAMS = ["midrib_curvature", "cross_curvature", "edge_curl"]
+
+
+_REVERSE_MARGIN_MAP = {0: "ENTIRE", 1: "SERRATE", 2: "DENTATE", 3: "CRENATE", 4: "LOBED"}
+
+
+class LeafShapeNode(bpy.types.Node, MtreeNode):
+    bl_idname = "mt_LeafShapeNode"
+    bl_label = "Leaf Shape"
+
+    # Section toggles
+    show_contour: bpy.props.BoolProperty(name="Contour", default=True)
+    show_venation: bpy.props.BoolProperty(name="Venation", default=False)
+    show_surface: bpy.props.BoolProperty(name="Surface", default=False)
+
+    # Generated object reference
+    leaf_object: bpy.props.StringProperty(name="Leaf Object")
+
+    # Margin type enum
+    margin_type: bpy.props.EnumProperty(
+        name="Margin Type",
+        items=[
+            ("ENTIRE", "Entire", "Smooth edge"),
+            ("SERRATE", "Serrate", "Saw-like teeth"),
+            ("DENTATE", "Dentate", "Outward teeth"),
+            ("CRENATE", "Crenate", "Rounded scallops"),
+            ("LOBED", "Lobed", "Deep rounded lobes"),
+        ],
+        default="ENTIRE",
+    )
+
+    # Status feedback
+    status_message: bpy.props.StringProperty(default="")
+    status_is_error: bpy.props.BoolProperty(default=False)
+
+    _MARGIN_TYPE_MAP = {
+        "ENTIRE": "Entire",
+        "SERRATE": "Serrate",
+        "DENTATE": "Dentate",
+        "CRENATE": "Crenate",
+        "LOBED": "Lobed",
+    }
+
+    def init(self, context):
+        # Tree I/O
+        self.add_input("mt_TreeSocket", "Tree", is_property=False)
+        self.add_output("mt_TreeSocket", "Tree", is_property=False)
+
+        # Contour sockets (superformula)
+        self.add_input(
+            "mt_FloatSocket",
+            "M",
+            property_name="m",
+            property_value=2.0,
+            min_value=1.0,
+            max_value=20.0,
+        )
+        self.add_input(
+            "mt_FloatSocket",
+            "A",
+            property_name="a",
+            property_value=1.0,
+            min_value=0.01,
+            max_value=5.0,
+        )
+        self.add_input(
+            "mt_FloatSocket",
+            "B",
+            property_name="b",
+            property_value=1.0,
+            min_value=0.01,
+            max_value=5.0,
+        )
+        self.add_input(
+            "mt_FloatSocket",
+            "N1",
+            property_name="n1",
+            property_value=3.0,
+            min_value=0.1,
+            max_value=50.0,
+        )
+        self.add_input(
+            "mt_FloatSocket",
+            "N2",
+            property_name="n2",
+            property_value=3.0,
+            min_value=0.1,
+            max_value=50.0,
+        )
+        self.add_input(
+            "mt_FloatSocket",
+            "N3",
+            property_name="n3",
+            property_value=3.0,
+            min_value=0.1,
+            max_value=50.0,
+        )
+        self.add_input(
+            "mt_FloatSocket",
+            "Aspect Ratio",
+            property_name="aspect_ratio",
+            property_value=0.5,
+            min_value=0.01,
+            max_value=2.0,
+        )
+        # Margin sockets
+        self.add_input(
+            "mt_IntSocket",
+            "Tooth Count",
+            property_name="tooth_count",
+            property_value=0,
+            min_value=0,
+            max_value=50,
+        )
+        self.add_input(
+            "mt_FloatSocket",
+            "Tooth Depth",
+            property_name="tooth_depth",
+            property_value=0.1,
+            min_value=0.0,
+            max_value=1.0,
+        )
+        self.add_input(
+            "mt_FloatSocket",
+            "Tooth Sharpness",
+            property_name="tooth_sharpness",
+            property_value=0.5,
+            min_value=0.0,
+            max_value=1.0,
+        )
+        # Surface sockets
+        self.add_input(
+            "mt_FloatSocket",
+            "Midrib Curvature",
+            property_name="midrib_curvature",
+            property_value=0.0,
+            min_value=-1.0,
+            max_value=1.0,
+        )
+        self.add_input(
+            "mt_FloatSocket",
+            "Cross Curvature",
+            property_name="cross_curvature",
+            property_value=0.0,
+            min_value=-1.0,
+            max_value=1.0,
+        )
+        self.add_input(
+            "mt_FloatSocket",
+            "Edge Curl",
+            property_name="edge_curl",
+            property_value=0.0,
+            min_value=-1.0,
+            max_value=1.0,
+        )
+
+    def generate_leaf(self):
+        """Create or update leaf mesh object from current parameters."""
+        import time
+
+        self.status_message = ""
+        self.status_is_error = False
+
+        try:
+            start_time = time.time()
+
+            gen = m_tree.LeafShapeGenerator()
+
+            # Set superformula parameters from sockets
+            for input_socket in self.inputs:
+                if not hasattr(input_socket, "is_property") or not input_socket.is_property:
+                    continue
+                prop_name = input_socket.property_name
+                if hasattr(gen, prop_name):
+                    setattr(gen, prop_name, input_socket.property_value)
+
+            # Set margin type from enum property
+            margin_name = self._MARGIN_TYPE_MAP.get(self.margin_type, "Entire")
+            gen.margin_type = getattr(m_tree.MarginType, margin_name)
+
+            cpp_mesh = gen.generate()
+
+            # Get or create Blender object
+            leaf_obj = self._get_or_create_leaf_object()
+            leaf_mesh = leaf_obj.data
+            leaf_mesh.clear_geometry()
+
+            create_leaf_mesh_from_cpp(leaf_mesh, cpp_mesh)
+            self.leaf_object = leaf_obj.name
+
+            elapsed = time.time() - start_time
+            self.status_message = f"Generated in {elapsed:.3f}s"
+            self.status_is_error = False
+
+        except Exception as e:
+            self.status_message = f"Error: {str(e)}"
+            self.status_is_error = True
+
+    def _get_or_create_leaf_object(self):
+        """Get existing leaf object or create a new one in MTree_Resources."""
+        if self.leaf_object:
+            obj = bpy.data.objects.get(self.leaf_object)
+            if obj is not None:
+                return obj
+
+        # Create new mesh and object
+        leaf_mesh = bpy.data.meshes.new("leaf")
+        leaf_obj = bpy.data.objects.new("leaf", leaf_mesh)
+
+        # Add to MTree_Resources collection
+        collection = bpy.data.collections.get("MTree_Resources")
+        if collection is None:
+            collection = bpy.data.collections.new("MTree_Resources")
+            bpy.context.scene.collection.children.link(collection)
+        collection.objects.link(leaf_obj)
+
+        return leaf_obj
+
+    def apply_preset(self, preset_name: str):
+        """Apply species preset to all sockets."""
+        preset = LEAF_PRESETS.get(preset_name)
+        if not preset:
+            return
+
+        # Set contour parameters
+        for key, value in preset.contour.items():
+            socket = self._get_socket_by_property(key)
+            if socket:
+                socket.property_value = float(value)
+
+        # Set margin type
+        margin_type_int = preset.margin.get("margin_type", 0)
+        self.margin_type = _REVERSE_MARGIN_MAP.get(margin_type_int, "ENTIRE")
+
+        # Set margin socket values
+        for key in ["tooth_count", "tooth_depth", "tooth_sharpness"]:
+            if key in preset.margin:
+                socket = self._get_socket_by_property(key)
+                if socket:
+                    socket.property_value = float(preset.margin[key])
+
+        # Set deformation parameters
+        for key, value in preset.deformation.items():
+            socket = self._get_socket_by_property(key)
+            if socket:
+                socket.property_value = float(value)
+
+    def _get_socket_by_property(self, property_name: str):
+        """Find input socket by property_name attribute."""
+        for socket in self.inputs:
+            if hasattr(socket, "property_name") and socket.property_name == property_name:
+                return socket
+        return None
+
+    def draw(self, context, layout):
+        """Compact node view."""
+        if self.status_message:
+            status_row = layout.row()
+            status_row.alert = self.status_is_error
+            icon = "ERROR" if self.status_is_error else "CHECKMARK"
+            status_row.label(text=self.status_message, icon=icon)
+
+        op = layout.operator("mtree.generate_leaf", text="Generate Leaf")
+        op.node_tree_name = self.get_node_tree().name
+        op.node_name = self.name
+
+        if self.leaf_object:
+            layout.label(text=f"Object: {self.leaf_object}")
+
+        layout.prop(self, "margin_type", text="Margin")
+
+    def draw_inspector(self, context, layout):
+        """Full inspector panel (N key)."""
+        # Preset buttons row
+        box = layout.box()
+        box.label(text="Presets", icon="PRESET")
+        row = box.row(align=True)
+        for preset_name in ["OAK", "MAPLE", "BIRCH", "WILLOW", "PINE"]:
+            op = row.operator(
+                "mtree.apply_leaf_preset",
+                text=preset_name.capitalize(),
+            )
+            op.preset = preset_name
+            op.node_tree_name = self.get_node_tree().name
+            op.node_name = self.name
+
+        # Contour section
+        self._draw_section(layout, "Contour", "show_contour", CONTOUR_PARAMS)
+
+        # Margin type dropdown in its own box
+        box = layout.box()
+        box.prop(self, "margin_type", text="Margin Type")
+        for param in MARGIN_PARAMS:
+            socket = self._get_socket_by_property(param)
+            if socket and socket.is_property:
+                socket.draw(context, box, self, socket.name)
+
+        # Surface deformation section
+        self._draw_section(layout, "Surface", "show_surface", SURFACE_PARAMS)
+
+    def _draw_section(self, layout, title: str, show_prop: str, params: list):
+        """Draw a collapsible section with parameters."""
+        box = layout.box()
+        row = box.row()
+        show = getattr(self, show_prop)
+        row.prop(
+            self,
+            show_prop,
+            icon="TRIA_DOWN" if show else "TRIA_RIGHT",
+            icon_only=True,
+            emboss=False,
+        )
+        row.label(text=title)
+
+        if show:
+            for param in params:
+                socket = self._get_socket_by_property(param)
+                if socket and socket.is_property:
+                    socket.draw(bpy.context, box, self, socket.name)
+
+    def construct_function(self):
+        """Pass-through: leaf shape nodes don't create tree functions."""
+        # Pass through to child nodes
+        for child in self.get_child_nodes():
+            if isinstance(child, MtreeFunctionNode):
+                return child.construct_function()
+        return None

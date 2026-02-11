@@ -16,6 +16,7 @@
 #include "source/meshers/splines_mesher/BasicMesher.hpp"
 #include "source/meshers/manifold_mesher/ManifoldMesher.hpp"
 #include "source/leaf/LeafPresets.hpp"
+#include "source/leaf/LeafShapeGenerator.hpp"
 
 
 using namespace Mtree;
@@ -35,7 +36,7 @@ PYBIND11_MODULE(m_tree, m) {
         .value("Open", VenationType::Open)
         .value("Closed", VenationType::Closed);
 
-    py::class_<LeafPreset, std::shared_ptr<LeafPreset>>(m, "LeafPreset")
+    py::class_<LeafPreset>(m, "LeafPreset")
         .def(py::init<>())
         .def_readwrite("name", &LeafPreset::name)
         .def_readwrite("m", &LeafPreset::m)
@@ -56,6 +57,36 @@ PYBIND11_MODULE(m_tree, m) {
         .def_readwrite("midrib_curvature", &LeafPreset::midrib_curvature)
         .def_readwrite("cross_curvature", &LeafPreset::cross_curvature)
         .def_readwrite("edge_curl", &LeafPreset::edge_curl);
+
+    m.def("get_leaf_preset", &get_leaf_preset, py::return_value_policy::copy);
+    m.def("get_leaf_preset_names", &get_leaf_preset_names);
+
+    py::class_<LeafShapeGenerator>(m, "LeafShapeGenerator")
+        .def(py::init<>())
+        .def_readwrite("m", &LeafShapeGenerator::m)
+        .def_readwrite("a", &LeafShapeGenerator::a)
+        .def_readwrite("b", &LeafShapeGenerator::b)
+        .def_readwrite("n1", &LeafShapeGenerator::n1)
+        .def_readwrite("n2", &LeafShapeGenerator::n2)
+        .def_readwrite("n3", &LeafShapeGenerator::n3)
+        .def_readwrite("aspect_ratio", &LeafShapeGenerator::aspect_ratio)
+        .def_readwrite("margin_type", &LeafShapeGenerator::margin_type)
+        .def_readwrite("tooth_count", &LeafShapeGenerator::tooth_count)
+        .def_readwrite("tooth_depth", &LeafShapeGenerator::tooth_depth)
+        .def_readwrite("tooth_sharpness", &LeafShapeGenerator::tooth_sharpness)
+        .def_readwrite("asymmetry_seed", &LeafShapeGenerator::asymmetry_seed)
+        .def_readwrite("enable_venation", &LeafShapeGenerator::enable_venation)
+        .def_readwrite("venation_type", &LeafShapeGenerator::venation_type)
+        .def_readwrite("vein_density", &LeafShapeGenerator::vein_density)
+        .def_readwrite("kill_distance", &LeafShapeGenerator::kill_distance)
+        .def_readwrite("growth_step_size", &LeafShapeGenerator::growth_step_size)
+        .def_readwrite("midrib_curvature", &LeafShapeGenerator::midrib_curvature)
+        .def_readwrite("cross_curvature", &LeafShapeGenerator::cross_curvature)
+        .def_readwrite("vein_displacement", &LeafShapeGenerator::vein_displacement)
+        .def_readwrite("edge_curl", &LeafShapeGenerator::edge_curl)
+        .def_readwrite("contour_resolution", &LeafShapeGenerator::contour_resolution)
+        .def_readwrite("seed", &LeafShapeGenerator::seed)
+        .def("generate", &LeafShapeGenerator::generate);
 
     py::enum_<CrownShape>(m, "CrownShape")
         .value("Conical", CrownShape::Conical)
@@ -211,6 +242,10 @@ PYBIND11_MODULE(m_tree, m) {
 			    }
 
 			    return result;
+            })
+        .def("has_float_attribute", [](const Mesh& mesh, std::string name)
+            {
+                return mesh.attributes.count(name) > 0;
             })
         .def("get_float_attribute", [](const Mesh& mesh, std::string name)
             {

@@ -8,6 +8,17 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing import Any
 
+# Margin type constants matching C++ MarginType enum
+MARGIN_ENTIRE = 0
+MARGIN_SERRATE = 1
+MARGIN_DENTATE = 2
+MARGIN_CRENATE = 3
+MARGIN_LOBED = 4
+
+# Venation type constants matching C++ VenationType enum
+VENATION_OPEN = 0
+VENATION_CLOSED = 1
+
 
 @dataclass
 class LeafPreset:
@@ -25,6 +36,9 @@ class LeafPreset:
         return (self.name, self.label, self.description)
 
 
+# Authoritative preset data for Blender UI (labels, descriptions, nested dict structure).
+# The C++ presets in m_tree/source/leaf/LeafPresets.cpp are independent test fixtures
+# and do not need to stay in sync with these values.
 LEAF_PRESETS: dict[str, LeafPreset] = {
     "OAK": LeafPreset(
         name="OAK",
@@ -40,14 +54,14 @@ LEAF_PRESETS: dict[str, LeafPreset] = {
             "aspect_ratio": 0.7,
         },
         margin={
-            "margin_type": 4,  # LOBED
+            "margin_type": MARGIN_LOBED,
             "tooth_count": 7,
             "tooth_depth": 0.3,
             "tooth_sharpness": 0.5,
         },
         venation={
             "enable_venation": True,
-            "venation_type": 0,  # OPEN
+            "venation_type": VENATION_OPEN,
             "vein_density": 800.0,
             "kill_distance": 3.0,
         },
@@ -71,14 +85,14 @@ LEAF_PRESETS: dict[str, LeafPreset] = {
             "aspect_ratio": 0.95,
         },
         margin={
-            "margin_type": 4,  # LOBED
+            "margin_type": MARGIN_LOBED,
             "tooth_count": 5,
             "tooth_depth": 0.5,
             "tooth_sharpness": 0.5,
         },
         venation={
             "enable_venation": True,
-            "venation_type": 0,  # OPEN (palmate)
+            "venation_type": VENATION_OPEN,
             "vein_density": 1000.0,
             "kill_distance": 2.5,
         },
@@ -102,14 +116,14 @@ LEAF_PRESETS: dict[str, LeafPreset] = {
             "aspect_ratio": 0.6,
         },
         margin={
-            "margin_type": 1,  # SERRATE
+            "margin_type": MARGIN_SERRATE,
             "tooth_count": 24,
             "tooth_depth": 0.05,
             "tooth_sharpness": 0.5,
         },
         venation={
             "enable_venation": True,
-            "venation_type": 0,  # OPEN
+            "venation_type": VENATION_OPEN,
             "vein_density": 600.0,
             "kill_distance": 3.0,
         },
@@ -133,14 +147,14 @@ LEAF_PRESETS: dict[str, LeafPreset] = {
             "aspect_ratio": 0.2,
         },
         margin={
-            "margin_type": 0,  # ENTIRE
+            "margin_type": MARGIN_ENTIRE,
             "tooth_count": 0,
             "tooth_depth": 0.0,
             "tooth_sharpness": 0.5,
         },
         venation={
             "enable_venation": True,
-            "venation_type": 0,  # OPEN
+            "venation_type": VENATION_OPEN,
             "vein_density": 400.0,
             "kill_distance": 4.0,
         },
@@ -164,14 +178,14 @@ LEAF_PRESETS: dict[str, LeafPreset] = {
             "aspect_ratio": 0.05,
         },
         margin={
-            "margin_type": 0,  # ENTIRE
+            "margin_type": MARGIN_ENTIRE,
             "tooth_count": 0,
             "tooth_depth": 0.0,
             "tooth_sharpness": 0.5,
         },
         venation={
             "enable_venation": False,
-            "venation_type": 0,  # OPEN
+            "venation_type": VENATION_OPEN,
             "vein_density": 0.0,
             "kill_distance": 0.0,
         },
