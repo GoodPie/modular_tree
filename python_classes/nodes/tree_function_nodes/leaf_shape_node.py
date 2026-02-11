@@ -15,6 +15,32 @@ MARGIN_PARAMS = ["tooth_count", "tooth_depth", "tooth_sharpness"]
 VENATION_PARAMS = ["vein_density", "kill_distance", "attraction_distance", "growth_step_size"]
 SURFACE_PARAMS = ["midrib_curvature", "cross_curvature", "vein_displacement", "edge_curl"]
 
+# Parameter descriptions for tooltips
+PARAM_DESCRIPTIONS = {
+    # Contour
+    "m": "Number of lobes or points on the leaf outline. 2 = simple leaf, 3 = clover-like, 5 = star-shaped",
+    "a": "Stretches the shape horizontally. Increase for a wider silhouette",
+    "b": "Stretches the shape vertically. Increase for a taller silhouette",
+    "n1": "Overall roundness. Low values = puffy and rounded, high values = thin and spiky",
+    "n2": "Shape of each lobe. Low = bulging lobes, high = pinched angular lobes",
+    "n3": "Secondary lobe shaping. Adjust relative to Lobe Shape A for asymmetric lobes",
+    "aspect_ratio": "Width-to-height ratio. 0.5 = twice as long as wide, 1.0 = equal, 2.0 = wider than tall",
+    # Margin
+    "tooth_count": "Number of teeth or scallops along the leaf edge",
+    "tooth_depth": "How deep the teeth cut into the leaf contour",
+    "tooth_sharpness": "How pointed vs. rounded the teeth are",
+    # Venation
+    "vein_density": "Number of growth attractors scattered inside the leaf. Higher = denser vein network",
+    "kill_distance": "How close a vein must grow to an attractor to consume it. Smaller = finer detail",
+    "attraction_distance": "How far away an attractor can influence vein growth direction",
+    "growth_step_size": "Length of each vein growth step. Smaller = smoother veins but slower generation",
+    # Surface
+    "midrib_curvature": "Bends the leaf along its central vein, like a taco shell",
+    "cross_curvature": "Cups the leaf perpendicular to the midrib",
+    "vein_displacement": "Raises the surface along vein paths. Requires venation enabled",
+    "edge_curl": "Curls the leaf edges upward (positive) or downward (negative)",
+}
+
 
 _REVERSE_MARGIN_MAP = {0: "ENTIRE", 1: "SERRATE", 2: "DENTATE", 3: "CRENATE", 4: "LOBED"}
 _REVERSE_VENATION_MAP = {0: "OPEN", 1: "CLOSED"}
@@ -78,54 +104,60 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
         self.add_input("mt_TreeSocket", "Tree", is_property=False)
         self.add_output("mt_TreeSocket", "Tree", is_property=False)
 
-        # Contour sockets (superformula)
+        # Contour sockets
         self.add_input(
             "mt_FloatSocket",
-            "M",
+            "Lobes",
             property_name="m",
             property_value=2.0,
             min_value=1.0,
             max_value=20.0,
+            description=PARAM_DESCRIPTIONS["m"],
         )
         self.add_input(
             "mt_FloatSocket",
-            "A",
+            "Horizontal Stretch",
             property_name="a",
             property_value=1.0,
             min_value=0.01,
             max_value=5.0,
+            description=PARAM_DESCRIPTIONS["a"],
         )
         self.add_input(
             "mt_FloatSocket",
-            "B",
+            "Vertical Stretch",
             property_name="b",
             property_value=1.0,
             min_value=0.01,
             max_value=5.0,
+            description=PARAM_DESCRIPTIONS["b"],
         )
         self.add_input(
             "mt_FloatSocket",
-            "N1",
+            "Roundness",
             property_name="n1",
             property_value=3.0,
             min_value=0.1,
             max_value=50.0,
+            description=PARAM_DESCRIPTIONS["n1"],
         )
         self.add_input(
             "mt_FloatSocket",
-            "N2",
+            "Lobe Shape A",
             property_name="n2",
             property_value=3.0,
             min_value=0.1,
             max_value=50.0,
+            description=PARAM_DESCRIPTIONS["n2"],
         )
         self.add_input(
             "mt_FloatSocket",
-            "N3",
+            "Lobe Shape B",
             property_name="n3",
             property_value=3.0,
             min_value=0.1,
             max_value=50.0,
+            description=PARAM_DESCRIPTIONS["n3"],
         )
         self.add_input(
             "mt_FloatSocket",
@@ -134,6 +166,7 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
             property_value=0.5,
             min_value=0.01,
             max_value=2.0,
+            description=PARAM_DESCRIPTIONS["aspect_ratio"],
         )
         # Margin sockets
         self.add_input(
@@ -143,6 +176,7 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
             property_value=0,
             min_value=0,
             max_value=50,
+            description=PARAM_DESCRIPTIONS["tooth_count"],
         )
         self.add_input(
             "mt_FloatSocket",
@@ -151,6 +185,7 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
             property_value=0.1,
             min_value=0.0,
             max_value=1.0,
+            description=PARAM_DESCRIPTIONS["tooth_depth"],
         )
         self.add_input(
             "mt_FloatSocket",
@@ -159,6 +194,7 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
             property_value=0.5,
             min_value=0.0,
             max_value=1.0,
+            description=PARAM_DESCRIPTIONS["tooth_sharpness"],
         )
         # Venation sockets
         self.add_input(
@@ -168,6 +204,7 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
             property_value=800.0,
             min_value=0.0,
             max_value=5000.0,
+            description=PARAM_DESCRIPTIONS["vein_density"],
         )
         self.add_input(
             "mt_FloatSocket",
@@ -176,6 +213,7 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
             property_value=0.03,
             min_value=0.001,
             max_value=0.5,
+            description=PARAM_DESCRIPTIONS["kill_distance"],
         )
         self.add_input(
             "mt_FloatSocket",
@@ -184,6 +222,7 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
             property_value=0.08,
             min_value=0.01,
             max_value=0.5,
+            description=PARAM_DESCRIPTIONS["attraction_distance"],
         )
         self.add_input(
             "mt_FloatSocket",
@@ -192,6 +231,7 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
             property_value=0.01,
             min_value=0.001,
             max_value=0.1,
+            description=PARAM_DESCRIPTIONS["growth_step_size"],
         )
         # Surface sockets
         self.add_input(
@@ -201,6 +241,7 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
             property_value=0.0,
             min_value=-1.0,
             max_value=1.0,
+            description=PARAM_DESCRIPTIONS["midrib_curvature"],
         )
         self.add_input(
             "mt_FloatSocket",
@@ -209,6 +250,7 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
             property_value=0.0,
             min_value=-1.0,
             max_value=1.0,
+            description=PARAM_DESCRIPTIONS["cross_curvature"],
         )
         self.add_input(
             "mt_FloatSocket",
@@ -217,6 +259,7 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
             property_value=0.0,
             min_value=-1.0,
             max_value=1.0,
+            description=PARAM_DESCRIPTIONS["vein_displacement"],
         )
         self.add_input(
             "mt_FloatSocket",
@@ -225,6 +268,7 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
             property_value=0.0,
             min_value=-1.0,
             max_value=1.0,
+            description=PARAM_DESCRIPTIONS["edge_curl"],
         )
 
     def generate_leaf(self):
