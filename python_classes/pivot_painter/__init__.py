@@ -12,6 +12,10 @@ for detailed setup instructions.
 Texture format (Epic's Pivot Painter 2.0 standard):
     - PivotPos_Index.exr: RGB = pivot position, A = hierarchy depth
     - XVector_Extent.exr: RGB = branch direction, A = branch length
+
+When leaf data is present (procedural leaf generator):
+    - LeafAttachment.exr: RGB = leaf attachment world position, A = 1.0
+    - LeafFacing.exr: RGB = leaf facing direction, A = 1.0
 """
 
 __all__ = ["PivotPainterExporter", "ExportFormat", "ExportResult"]

@@ -230,3 +230,156 @@ def create_xvector_extent_pixels(
             pixels[pixel_idx + 3] = extent  # A = branch extent
 
     return pixels
+
+
+def compute_leaf_attachment_points(
+    instance_positions: NDArray[np.floating],
+) -> NDArray[np.floating]:
+    """Extract leaf attachment points from leaf instance positions.
+
+    The attachment point for each leaf is its instance origin position,
+    which corresponds to where the leaf petiole meets the branch.
+
+    Args:
+        instance_positions: Nx3 array of leaf instance world positions.
+
+    Returns:
+        Nx3 array of attachment point positions.
+    """
+    return np.array(instance_positions, dtype=np.float64).reshape(-1, 3)
+
+
+def compute_leaf_facing_directions(
+    instance_rotations: NDArray[np.floating],
+    local_up: NDArray[np.floating] | None = None,
+) -> NDArray[np.floating]:
+    """Compute leaf facing directions from instance Euler XYZ rotations.
+
+    Each leaf's facing direction is its local up-axis (Z by default)
+    rotated by the instance Euler rotation. This represents the leaf
+    surface normal after placement.
+
+    Args:
+        instance_rotations: Nx3 array of Euler XYZ rotation angles (radians).
+        local_up: Local axis to rotate, defaults to [0, 0, 1] (Z-up).
+
+    Returns:
+        Nx3 array of normalized facing direction vectors.
+    """
+    rotations = np.array(instance_rotations, dtype=np.float64).reshape(-1, 3)
+    n = len(rotations)
+
+    if n == 0:
+        return np.zeros((0, 3), dtype=np.float64)
+
+    cx = np.cos(rotations[:, 0])
+    sx = np.sin(rotations[:, 0])
+    cy = np.cos(rotations[:, 1])
+    sy = np.sin(rotations[:, 1])
+    cz = np.cos(rotations[:, 2])
+    sz = np.sin(rotations[:, 2])
+
+    if local_up is not None:
+        up = np.asarray(local_up, dtype=np.float64).ravel()
+    else:
+        up = np.array([0.0, 0.0, 1.0])
+
+    # Build per-instance rotation matrices R = Rz * Ry * Rx (Euler XYZ)
+    # and apply to the local up vector
+    # R00 = cz*cy, R01 = cz*sy*sx - sz*cx, R02 = cz*sy*cx + sz*sx
+    # R10 = sz*cy, R11 = sz*sy*sx + cz*cx, R12 = sz*sy*cx - cz*sx
+    # R20 = -sy,   R21 = cy*sx,             R22 = cy*cx
+    dx = (cz * cy) * up[0] + (cz * sy * sx - sz * cx) * up[1] + (cz * sy * cx + sz * sx) * up[2]
+    dy = (sz * cy) * up[0] + (sz * sy * sx + cz * cx) * up[1] + (sz * sy * cx - cz * sx) * up[2]
+    dz = (-sy) * up[0] + (cy * sx) * up[1] + (cy * cx) * up[2]
+
+    directions = np.column_stack([dx, dy, dz])
+
+    # Normalize each direction vector
+    lengths = np.linalg.norm(directions, axis=1, keepdims=True)
+    lengths = np.maximum(lengths, 1e-6)
+    directions = directions / lengths
+
+    return directions
+
+
+def create_leaf_attachment_pixels(
+    leaf_ids: NDArray[np.floating],
+    attachment_points: NDArray[np.floating],
+    texture_size: int,
+) -> NDArray[np.floating]:
+    """Create pixel data for LeafAttachment texture.
+
+    Format: RGB = attachment world position, A = 1.0.
+
+    Args:
+        leaf_ids: Per-vertex leaf instance IDs.
+        attachment_points: Per-vertex attachment positions (Nx3 array).
+        texture_size: Width/height of the square texture.
+
+    Returns:
+        Flat array of RGBA pixel values (length = size * size * 4).
+    """
+    size = texture_size
+    pixels = np.zeros(size * size * 4)
+
+    unique_leaves = np.unique(leaf_ids.astype(int))
+    for leaf_id in unique_leaves:
+        mask = leaf_ids == leaf_id
+        if not np.any(mask):
+            continue
+
+        idx = np.where(mask)[0][0]
+        pos = attachment_points[idx]
+
+        px, py = stem_id_to_pixel_coords(int(leaf_id), size)
+
+        if py < size:
+            pixel_idx = (py * size + px) * 4
+            pixels[pixel_idx] = pos[0]  # R = X position
+            pixels[pixel_idx + 1] = pos[1]  # G = Y position
+            pixels[pixel_idx + 2] = pos[2]  # B = Z position
+            pixels[pixel_idx + 3] = 1.0  # A = 1.0
+
+    return pixels
+
+
+def create_leaf_facing_pixels(
+    leaf_ids: NDArray[np.floating],
+    facing_directions: NDArray[np.floating],
+    texture_size: int,
+) -> NDArray[np.floating]:
+    """Create pixel data for LeafFacing texture.
+
+    Format: RGB = normalized facing direction, A = 1.0.
+
+    Args:
+        leaf_ids: Per-vertex leaf instance IDs.
+        facing_directions: Per-vertex facing direction vectors (Nx3 array).
+        texture_size: Width/height of the square texture.
+
+    Returns:
+        Flat array of RGBA pixel values (length = size * size * 4).
+    """
+    size = texture_size
+    pixels = np.zeros(size * size * 4)
+
+    unique_leaves = np.unique(leaf_ids.astype(int))
+    for leaf_id in unique_leaves:
+        mask = leaf_ids == leaf_id
+        if not np.any(mask):
+            continue
+
+        idx = np.where(mask)[0][0]
+        direction = normalize_direction_vector(facing_directions[idx].copy())
+
+        px, py = stem_id_to_pixel_coords(int(leaf_id), size)
+
+        if py < size:
+            pixel_idx = (py * size + px) * 4
+            pixels[pixel_idx] = direction[0]  # R = X direction
+            pixels[pixel_idx + 1] = direction[1]  # G = Y direction
+            pixels[pixel_idx + 2] = direction[2]  # B = Z direction
+            pixels[pixel_idx + 3] = 1.0  # A = 1.0
+
+    return pixels

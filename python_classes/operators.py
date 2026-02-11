@@ -12,6 +12,7 @@ from .m_tree_wrapper import lazy_m_tree as m_tree
 from .mesh_utils import create_mesh_from_cpp
 from .pivot_painter import ExportFormat, PivotPainterExporter
 from .presets import apply_preset, apply_trunk_preset, get_growth_preset_items, get_preset_items
+from .presets.leaf_presets import get_leaf_preset_items
 from .resources.node_groups import distribute_leaves
 
 
@@ -40,11 +41,60 @@ class AddLeavesModifier(bpy.types.Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     object_id: bpy.props.StringProperty()
+    distribution_mode: bpy.props.IntProperty(
+        name="Distribution Mode",
+        description="0=Random, 1=Phyllotactic",
+        default=0,
+        min=0,
+        max=1,
+    )
+    phyllotaxis_angle: bpy.props.FloatProperty(
+        name="Phyllotaxis Angle",
+        description="Divergence angle in degrees (137.5 = golden angle)",
+        default=137.5,
+        min=0.0,
+        max=360.0,
+    )
+    billboard_mode: bpy.props.EnumProperty(
+        name="Billboard Mode",
+        items=[
+            ("OFF", "Off", "No billboard rotation"),
+            ("AXIAL", "Axial", "Rotate around branch axis toward camera"),
+            ("CAMERA", "Camera-Facing", "Fully face the camera"),
+        ],
+        default="OFF",
+    )
+    lod_1_distance: bpy.props.FloatProperty(
+        name="LOD 1 Distance",
+        description="Distance threshold for LOD 1 switching",
+        default=20.0,
+        min=0.0,
+    )
+    cull_distance: bpy.props.FloatProperty(
+        name="Cull Distance",
+        description="Distance beyond which leaves are removed",
+        default=100.0,
+        min=0.0,
+    )
+    enable_normal_transfer: bpy.props.BoolProperty(
+        name="Enable Normal Transfer",
+        description="Transfer proxy volume normals to leaves for smooth canopy shading",
+        default=True,
+    )
 
     def execute(self, context):
         ob = bpy.data.objects.get(self.object_id)
         if ob is not None:
-            distribute_leaves(ob)
+            distribute_leaves(
+                ob,
+                distribution_mode=self.distribution_mode,
+                phyllotaxis_angle=self.phyllotaxis_angle,
+                billboard_mode=self.billboard_mode,
+                lod_1_distance=self.lod_1_distance,
+                cull_distance=self.cull_distance,
+                camera=bpy.context.scene.camera,
+                enable_normal_transfer=self.enable_normal_transfer,
+            )
         return {"FINISHED"}
 
 
@@ -190,6 +240,53 @@ class ExportPivotPainter(bpy.types.Operator):
             layout.prop(self, "export_path")
 
 
+class GenerateLeaf(bpy.types.Operator):
+    """Generate a procedural leaf mesh from LeafShapeNode parameters."""
+
+    bl_idname = "mtree.generate_leaf"
+    bl_label = "Generate Leaf"
+    bl_options = {"REGISTER", "UNDO"}
+
+    node_tree_name: bpy.props.StringProperty()
+    node_name: bpy.props.StringProperty()
+
+    def execute(self, context):
+        node_tree = bpy.data.node_groups.get(self.node_tree_name)
+        if not node_tree:
+            self.report({"ERROR"}, "Node tree not found")
+            return {"CANCELLED"}
+        node = node_tree.nodes.get(self.node_name)
+        if node and hasattr(node, "generate_leaf"):
+            node.generate_leaf()
+            return {"FINISHED"}
+        self.report({"ERROR"}, "Leaf shape node not found")
+        return {"CANCELLED"}
+
+
+class ApplyLeafPreset(bpy.types.Operator):
+    """Apply a species preset to a LeafShapeNode."""
+
+    bl_idname = "mtree.apply_leaf_preset"
+    bl_label = "Apply Leaf Preset"
+    bl_options = {"REGISTER", "UNDO"}
+
+    preset: bpy.props.EnumProperty(
+        name="Preset",
+        items=get_leaf_preset_items(),
+    )
+    node_tree_name: bpy.props.StringProperty()
+    node_name: bpy.props.StringProperty()
+
+    def execute(self, context):
+        node_tree = bpy.data.node_groups.get(self.node_tree_name)
+        if not node_tree:
+            return {"CANCELLED"}
+        node = node_tree.nodes.get(self.node_name)
+        if node and hasattr(node, "apply_preset"):
+            node.apply_preset(self.preset)
+        return {"FINISHED"}
+
+
 class ApplyBranchNodePreset(bpy.types.Operator):
     """Apply a preset to a branch node."""
 
@@ -260,6 +357,8 @@ _classes = [
     AddLeavesModifier,
     QuickGenerateTree,
     ExportPivotPainter,
+    GenerateLeaf,
+    ApplyLeafPreset,
     ApplyBranchNodePreset,
     ApplyTrunkNodePreset,
     ApplyGrowthNodePreset,
