@@ -1,6 +1,8 @@
 #include "LeafShapeGenerator.hpp"
+#include "VenationGenerator.hpp"
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <numeric>
 
 namespace Mtree
@@ -281,30 +283,55 @@ Mesh LeafShapeGenerator::triangulate(const std::vector<Vector2>& contour)
 	return mesh;
 }
 
+LeafShapeGenerator::BBox2D
+LeafShapeGenerator::compute_contour_bbox(const std::vector<Vector2>& contour) const
+{
+	BBox2D bb;
+	bb.min_x = contour[0].x();
+	bb.max_x = contour[0].x();
+	bb.min_y = contour[0].y();
+	bb.max_y = contour[0].y();
+	for (const auto& pt : contour)
+	{
+		bb.min_x = std::min(bb.min_x, pt.x());
+		bb.max_x = std::max(bb.max_x, pt.x());
+		bb.min_y = std::min(bb.min_y, pt.y());
+		bb.max_y = std::max(bb.max_y, pt.y());
+	}
+	bb.width = bb.max_x - bb.min_x;
+	bb.height = bb.max_y - bb.min_y;
+	bb.center_x = (bb.min_x + bb.max_x) * 0.5f;
+	return bb;
+}
+
+void LeafShapeGenerator::apply_venation(Mesh& mesh, const std::vector<Vector2>& contour)
+{
+	if (!enable_venation)
+		return;
+
+	VenationGenerator venation;
+	venation.type = venation_type;
+	venation.vein_density = vein_density;
+	venation.kill_distance = kill_distance;
+	venation.attraction_distance = attraction_distance;
+	venation.growth_step_size = growth_step_size;
+	venation.seed = seed;
+
+	auto veins = venation.generate_veins(contour);
+	venation.compute_vein_distances(mesh, veins);
+}
+
 void LeafShapeGenerator::apply_deformation(Mesh& mesh, const std::vector<Vector2>& contour)
 {
 	if (mesh.vertices.empty())
 		return;
 
-	// Compute bounding box for normalization
-	float min_x = contour[0].x(), max_x = contour[0].x();
-	float min_y = contour[0].y(), max_y = contour[0].y();
-	for (const auto& pt : contour)
-	{
-		min_x = std::min(min_x, pt.x());
-		max_x = std::max(max_x, pt.x());
-		min_y = std::min(min_y, pt.y());
-		max_y = std::max(max_y, pt.y());
-	}
-	float width = max_x - min_x;
-	float height = max_y - min_y;
-	if (width < 1e-10f || height < 1e-10f)
+	auto bb = compute_contour_bbox(contour);
+	if (bb.width < 1e-10f || bb.height < 1e-10f)
 		return;
 
-	float center_x = (min_x + max_x) * 0.5f;
-
 	// Compute min distance to contour edge for each vertex (for edge curl)
-	std::vector<float> edge_distances(mesh.vertices.size(), 1e10f);
+	std::vector<float> edge_distances(mesh.vertices.size(), std::numeric_limits<float>::max());
 	for (size_t vi = 0; vi < mesh.vertices.size(); ++vi)
 	{
 		Vector2 pt(mesh.vertices[vi].x(), mesh.vertices[vi].y());
@@ -326,8 +353,8 @@ void LeafShapeGenerator::apply_deformation(Mesh& mesh, const std::vector<Vector2
 	for (size_t i = 0; i < mesh.vertices.size(); ++i)
 	{
 		auto& v = mesh.vertices[i];
-		float nx = (v.x() - center_x) / (width * 0.5f); // -1 to 1 across width
-		float ny = (v.y() - min_y) / height;            // 0 to 1 along length
+		float nx = (v.x() - bb.center_x) / (bb.width * 0.5f); // -1 to 1 across width
+		float ny = (v.y() - bb.min_y) / bb.height;            // 0 to 1 along length
 
 		float z = 0.0f;
 
@@ -338,12 +365,28 @@ void LeafShapeGenerator::apply_deformation(Mesh& mesh, const std::vector<Vector2
 		z += cross_curvature * nx * nx * 0.3f;
 
 		// 3. Edge curl: inward curl based on distance from edge
-		float max_edge_dist = width * 0.5f;
+		float max_edge_dist = bb.width * 0.5f;
 		float edge_factor =
 		    1.0f - std::clamp(edge_distances[i] / (max_edge_dist * 0.3f), 0.0f, 1.0f);
 		z += edge_curl * edge_factor * edge_factor * 0.2f;
 
 		v.z() = z;
+	}
+
+	// 4. Vein displacement: raise surface along vein paths
+	if (vein_displacement != 0.0f)
+	{
+		auto it = mesh.attributes.find("vein_distance");
+		if (it != mesh.attributes.end())
+		{
+			auto& vein_dist = static_cast<Attribute<float>&>(*it->second);
+			for (size_t i = 0; i < mesh.vertices.size(); ++i)
+			{
+				float dist = vein_dist.data[i];
+				float influence = std::exp(-dist * 50.0f);
+				mesh.vertices[i].z() += vein_displacement * influence * 0.05f;
+			}
+		}
 	}
 }
 
@@ -352,25 +395,14 @@ void LeafShapeGenerator::compute_uvs(Mesh& mesh, const std::vector<Vector2>& con
 	if (contour.empty() || mesh.vertices.empty())
 		return;
 
-	// Compute bounding box of contour
-	float min_x = contour[0].x(), max_x = contour[0].x();
-	float min_y = contour[0].y(), max_y = contour[0].y();
-	for (const auto& pt : contour)
-	{
-		min_x = std::min(min_x, pt.x());
-		max_x = std::max(max_x, pt.x());
-		min_y = std::min(min_y, pt.y());
-		max_y = std::max(max_y, pt.y());
-	}
-	float width = max_x - min_x;
-	float height = max_y - min_y;
+	auto bb = compute_contour_bbox(contour);
 
 	// Planar UV projection: map vertex XY to 0-1 range
 	mesh.uvs.resize(mesh.vertices.size());
 	for (size_t i = 0; i < mesh.vertices.size(); ++i)
 	{
-		float u = (width > 1e-10f) ? (mesh.vertices[i].x() - min_x) / width : 0.5f;
-		float v = (height > 1e-10f) ? (mesh.vertices[i].y() - min_y) / height : 0.5f;
+		float u = (bb.width > 1e-10f) ? (mesh.vertices[i].x() - bb.min_x) / bb.width : 0.5f;
+		float v = (bb.height > 1e-10f) ? (mesh.vertices[i].y() - bb.min_y) / bb.height : 0.5f;
 		mesh.uvs[i] = Vector2(std::clamp(u, 0.0f, 1.0f), std::clamp(v, 0.0f, 1.0f));
 	}
 
@@ -395,6 +427,7 @@ Mesh LeafShapeGenerator::generate()
 	contour = apply_margin(contour);
 	Mesh mesh = triangulate(contour);
 	compute_uvs(mesh, contour);
+	apply_venation(mesh, contour);
 	apply_deformation(mesh, contour);
 
 	return mesh;

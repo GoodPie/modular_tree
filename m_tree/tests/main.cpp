@@ -11,6 +11,7 @@
 #include "source/meshers/manifold_mesher/ManifoldMesher.hpp"
 #include "source/leaf/LeafShapeGenerator.hpp"
 #include "source/leaf/LeafPresets.hpp"
+#include "source/leaf/VenationGenerator.hpp"
 
 
 using namespace Mtree;
@@ -394,6 +395,268 @@ TEST(mesher_phyllotaxis_angle_golden_angle_pattern)
 	ASSERT_TRUE(std::abs(first_section) < 1e-5f);
 	// Second section should be fmod(1 * golden_angle, 2PI)
 	ASSERT_TRUE(std::abs(second_section - expected_second) < 1e-4f);
+}
+
+// =====================================================================
+// VenationGenerator tests
+// =====================================================================
+
+TEST(venation_spatial_hash_neighbors)
+{
+	SpatialHash2D hash(1.0f, Vector2(-5.0f, -5.0f), Vector2(5.0f, 5.0f));
+	hash.insert(0, Vector2(0.0f, 0.0f));
+	hash.insert(1, Vector2(0.5f, 0.0f));
+	hash.insert(2, Vector2(3.0f, 3.0f));
+	hash.insert(3, Vector2(0.1f, 0.1f));
+
+	auto neighbors = hash.query_radius(Vector2(0.0f, 0.0f), 1.0f);
+
+	// Should find points 0, 1, 3 (within radius 1.0 of origin)
+	// Point 2 at (3,3) is ~4.24 away, should NOT be included
+	bool has_0 = false, has_1 = false, has_2 = false, has_3 = false;
+	for (int id : neighbors)
+	{
+		if (id == 0) has_0 = true;
+		if (id == 1) has_1 = true;
+		if (id == 2) has_2 = true;
+		if (id == 3) has_3 = true;
+	}
+	ASSERT_TRUE(has_0);
+	ASSERT_TRUE(has_1);
+	ASSERT_TRUE(!has_2);
+	ASSERT_TRUE(has_3);
+	ASSERT_EQ(static_cast<int>(neighbors.size()), 3);
+}
+
+TEST(venation_spatial_hash_empty_query)
+{
+	SpatialHash2D hash(1.0f, Vector2(-5.0f, -5.0f), Vector2(5.0f, 5.0f));
+	hash.insert(0, Vector2(3.0f, 3.0f));
+
+	auto neighbors = hash.query_radius(Vector2(0.0f, 0.0f), 0.5f);
+	ASSERT_EQ(static_cast<int>(neighbors.size()), 0);
+}
+
+TEST(venation_runions_connected_tree)
+{
+	// Create a simple diamond contour
+	std::vector<Vector2> contour = {
+	    Vector2(0.0f, -0.5f), Vector2(0.5f, 0.0f),
+	    Vector2(0.0f, 0.5f),  Vector2(-0.5f, 0.0f),
+	};
+
+	VenationGenerator gen;
+	gen.type = VenationType::Open;
+	gen.vein_density = 2000.0f;
+	gen.kill_distance = 0.03f;
+	gen.growth_step_size = 0.01f;
+	gen.attraction_distance = 0.08f;
+	gen.max_iterations = 300;
+	gen.seed = 42;
+
+	auto veins = gen.generate_veins(contour);
+	ASSERT_GT(static_cast<int>(veins.size()), 1);
+
+	// Verify all non-root nodes have valid parent references forming a connected tree
+	for (size_t i = 1; i < veins.size(); ++i)
+	{
+		ASSERT_GE(veins[i].parent, 0);
+		ASSERT_TRUE(veins[i].parent < static_cast<int>(i)); // Parent index < child index
+
+		// Follow parent chain to root (must terminate at -1)
+		int current = static_cast<int>(i);
+		int steps = 0;
+		while (current >= 0 && steps < 10000)
+		{
+			current = veins[current].parent;
+			steps++;
+		}
+		ASSERT_EQ(current, -1); // Must reach root
+	}
+
+	// Root node has parent = -1
+	ASSERT_EQ(veins[0].parent, -1);
+}
+
+TEST(venation_open_produces_branching)
+{
+	std::vector<Vector2> contour = {
+	    Vector2(0.0f, -0.5f), Vector2(0.5f, 0.0f),
+	    Vector2(0.0f, 0.5f),  Vector2(-0.5f, 0.0f),
+	};
+
+	VenationGenerator gen;
+	gen.type = VenationType::Open;
+	gen.vein_density = 2000.0f;
+	gen.kill_distance = 0.03f;
+	gen.growth_step_size = 0.01f;
+	gen.attraction_distance = 0.08f;
+	gen.max_iterations = 300;
+	gen.seed = 42;
+
+	auto veins = gen.generate_veins(contour);
+	ASSERT_GT(static_cast<int>(veins.size()), 5);
+
+	// Count branching points (nodes that are parents of multiple children)
+	std::vector<int> child_count(veins.size(), 0);
+	for (size_t i = 1; i < veins.size(); ++i)
+	{
+		if (veins[i].parent >= 0)
+			child_count[veins[i].parent]++;
+	}
+
+	int branch_points = 0;
+	for (size_t i = 0; i < veins.size(); ++i)
+	{
+		if (child_count[i] > 1)
+			branch_points++;
+	}
+
+	// OPEN venation should have branching points (tree structure)
+	ASSERT_GT(branch_points, 0);
+}
+
+TEST(venation_closed_produces_loops)
+{
+	std::vector<Vector2> contour = {
+	    Vector2(0.0f, -0.5f), Vector2(0.5f, 0.0f),
+	    Vector2(0.0f, 0.5f),  Vector2(-0.5f, 0.0f),
+	};
+
+	VenationGenerator gen;
+	gen.type = VenationType::Closed;
+	gen.vein_density = 2000.0f;
+	gen.kill_distance = 0.03f;
+	gen.growth_step_size = 0.01f;
+	gen.attraction_distance = 0.08f;
+	gen.max_iterations = 300;
+	gen.seed = 42;
+
+	auto veins = gen.generate_veins(contour);
+	ASSERT_GT(static_cast<int>(veins.size()), 5);
+
+	// For CLOSED type, some nodes should connect to non-parent-chain veins
+	// (the parent index may point to a node that isn't a direct ancestor
+	// in the growth order, indicating a loop was formed)
+	// Check that veins were produced (loop detection is structural)
+	// CLOSED type should produce at least as many veins as OPEN with same params
+	VenationGenerator gen_open;
+	gen_open.type = VenationType::Open;
+	gen_open.vein_density = 2000.0f;
+	gen_open.kill_distance = 0.03f;
+	gen_open.growth_step_size = 0.01f;
+	gen_open.attraction_distance = 0.08f;
+	gen_open.max_iterations = 300;
+	gen_open.seed = 42;
+
+	auto veins_open = gen_open.generate_veins(contour);
+	// CLOSED should produce at least as many nodes due to reduced kill distance
+	ASSERT_GE(static_cast<int>(veins.size()), static_cast<int>(veins_open.size()));
+
+	// Structural check: verify loop merges occurred
+	// In closed venation, some nodes are parented to non-ancestor nodes (loop connections).
+	// Detect by finding nodes whose parent has children from different growth lineages.
+	// Count unique parents and find "merge parents" — parents with multiple children
+	// where at least one child index is not contiguous with siblings (cross-branch merge).
+	std::vector<std::vector<int>> children(veins.size());
+	for (size_t i = 1; i < veins.size(); ++i)
+	{
+		if (veins[i].parent >= 0)
+			children[veins[i].parent].push_back(static_cast<int>(i));
+	}
+
+	int merge_parents = 0;
+	for (size_t i = 0; i < veins.size(); ++i)
+	{
+		if (children[i].size() >= 2)
+		{
+			// Check if children come from different growth fronts
+			// (non-contiguous child indices indicate a merge from a different branch)
+			bool has_distant_child = false;
+			for (size_t c = 1; c < children[i].size(); ++c)
+			{
+				if (children[i][c] - children[i][c - 1] > 1)
+				{
+					has_distant_child = true;
+					break;
+				}
+			}
+			if (has_distant_child)
+				merge_parents++;
+		}
+	}
+	ASSERT_GT(merge_parents, 0);
+}
+
+TEST(venation_vein_distance_all_vertices)
+{
+	// Generate a full leaf with venation enabled
+	LeafShapeGenerator gen;
+	gen.enable_venation = true;
+	gen.venation_type = VenationType::Open;
+	gen.vein_density = 800.0f;
+	gen.kill_distance = 0.03f;
+	gen.contour_resolution = 32;
+	Mesh mesh = gen.generate();
+
+	// Verify vein_distance attribute exists and has correct size
+	auto it = mesh.attributes.find("vein_distance");
+	ASSERT_TRUE(it != mesh.attributes.end());
+
+	auto& attr = *static_cast<Attribute<float>*>(it->second.get());
+	ASSERT_EQ(static_cast<int>(attr.data.size()), static_cast<int>(mesh.vertices.size()));
+
+	// All distances should be non-negative
+	for (const auto& val : attr.data)
+	{
+		ASSERT_GE(val, 0.0f);
+	}
+
+	// At least some vertices should be close to veins (distance < 0.5)
+	bool has_close = false;
+	for (const auto& val : attr.data)
+	{
+		if (val < 0.5f)
+		{
+			has_close = true;
+			break;
+		}
+	}
+	ASSERT_TRUE(has_close);
+}
+
+TEST(venation_zero_auxins_graceful)
+{
+	std::vector<Vector2> contour = {
+	    Vector2(0.0f, -0.5f), Vector2(0.5f, 0.0f),
+	    Vector2(0.0f, 0.5f),  Vector2(-0.5f, 0.0f),
+	};
+
+	VenationGenerator gen;
+	gen.vein_density = 0.0f; // Zero density
+	gen.seed = 42;
+
+	auto veins = gen.generate_veins(contour);
+	ASSERT_EQ(static_cast<int>(veins.size()), 0);
+
+	// compute_vein_distances with empty veins should not crash
+	Mesh mesh;
+	mesh.vertices.push_back(Vector3(0.0f, 0.0f, 0.0f));
+	gen.compute_vein_distances(mesh, veins);
+	// No attribute should be added (empty veins)
+	ASSERT_TRUE(mesh.attributes.find("vein_distance") == mesh.attributes.end());
+}
+
+TEST(venation_no_crash_small_contour)
+{
+	// Contour with fewer than 3 points
+	std::vector<Vector2> contour = {Vector2(0.0f, 0.0f), Vector2(1.0f, 0.0f)};
+
+	VenationGenerator gen;
+	gen.vein_density = 800.0f;
+
+	auto veins = gen.generate_veins(contour);
+	ASSERT_EQ(static_cast<int>(veins.size()), 0);
 }
 
 int main()

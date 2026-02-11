@@ -26,11 +26,12 @@ class LeafShapeGenerator
 	float tooth_sharpness = 0.5f;
 	int asymmetry_seed = 0;
 
-	// Venation parameters (stubs for Phase 5)
+	// Venation parameters
 	bool enable_venation = false;
 	VenationType venation_type = VenationType::Open;
 	float vein_density = 800.0f;
 	float kill_distance = 0.03f;
+	float attraction_distance = 0.08f;
 	float growth_step_size = 0.01f;
 
 	// Surface deformation
@@ -49,8 +50,15 @@ class LeafShapeGenerator
 	std::vector<Vector2> sample_contour();
 	std::vector<Vector2> apply_margin(const std::vector<Vector2>& contour);
 	Mesh triangulate(const std::vector<Vector2>& contour);
+	void apply_venation(Mesh& mesh, const std::vector<Vector2>& contour);
 	void apply_deformation(Mesh& mesh, const std::vector<Vector2>& contour);
 	void compute_uvs(Mesh& mesh, const std::vector<Vector2>& contour);
+
+	struct BBox2D
+	{
+		float min_x, max_x, min_y, max_y, width, height, center_x;
+	};
+	BBox2D compute_contour_bbox(const std::vector<Vector2>& contour) const;
 
 	float superformula_radius(float theta, float effective_n1) const;
 	bool is_ear(const std::vector<Vector2>& polygon, int prev, int curr, int next) const;

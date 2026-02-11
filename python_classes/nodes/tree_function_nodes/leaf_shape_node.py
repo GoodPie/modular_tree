@@ -12,10 +12,12 @@ from ..base_types.node import MtreeFunctionNode, MtreeNode
 # Socket parameter definitions for organized access
 CONTOUR_PARAMS = ["m", "a", "b", "n1", "n2", "n3", "aspect_ratio"]
 MARGIN_PARAMS = ["tooth_count", "tooth_depth", "tooth_sharpness"]
-SURFACE_PARAMS = ["midrib_curvature", "cross_curvature", "edge_curl"]
+VENATION_PARAMS = ["vein_density", "kill_distance", "attraction_distance", "growth_step_size"]
+SURFACE_PARAMS = ["midrib_curvature", "cross_curvature", "vein_displacement", "edge_curl"]
 
 
 _REVERSE_MARGIN_MAP = {0: "ENTIRE", 1: "SERRATE", 2: "DENTATE", 3: "CRENATE", 4: "LOBED"}
+_REVERSE_VENATION_MAP = {0: "OPEN", 1: "CLOSED"}
 
 
 class LeafShapeNode(bpy.types.Node, MtreeNode):
@@ -43,6 +45,17 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
         default="ENTIRE",
     )
 
+    # Venation controls
+    enable_venation: bpy.props.BoolProperty(name="Enable Venation", default=False)
+    venation_type: bpy.props.EnumProperty(
+        name="Venation Type",
+        items=[
+            ("OPEN", "Open", "Tree-like branching (dicot pattern)"),
+            ("CLOSED", "Closed", "Looped/anastomosing network"),
+        ],
+        default="OPEN",
+    )
+
     # Status feedback
     status_message: bpy.props.StringProperty(default="")
     status_is_error: bpy.props.BoolProperty(default=False)
@@ -53,6 +66,11 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
         "DENTATE": "Dentate",
         "CRENATE": "Crenate",
         "LOBED": "Lobed",
+    }
+
+    _VENATION_TYPE_MAP = {
+        "OPEN": "Open",
+        "CLOSED": "Closed",
     }
 
     def init(self, context):
@@ -142,6 +160,39 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
             min_value=0.0,
             max_value=1.0,
         )
+        # Venation sockets
+        self.add_input(
+            "mt_FloatSocket",
+            "Vein Density",
+            property_name="vein_density",
+            property_value=800.0,
+            min_value=0.0,
+            max_value=5000.0,
+        )
+        self.add_input(
+            "mt_FloatSocket",
+            "Kill Distance",
+            property_name="kill_distance",
+            property_value=0.03,
+            min_value=0.001,
+            max_value=0.5,
+        )
+        self.add_input(
+            "mt_FloatSocket",
+            "Attraction Distance",
+            property_name="attraction_distance",
+            property_value=0.08,
+            min_value=0.01,
+            max_value=0.5,
+        )
+        self.add_input(
+            "mt_FloatSocket",
+            "Growth Step Size",
+            property_name="growth_step_size",
+            property_value=0.01,
+            min_value=0.001,
+            max_value=0.1,
+        )
         # Surface sockets
         self.add_input(
             "mt_FloatSocket",
@@ -155,6 +206,14 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
             "mt_FloatSocket",
             "Cross Curvature",
             property_name="cross_curvature",
+            property_value=0.0,
+            min_value=-1.0,
+            max_value=1.0,
+        )
+        self.add_input(
+            "mt_FloatSocket",
+            "Vein Displacement",
+            property_name="vein_displacement",
             property_value=0.0,
             min_value=-1.0,
             max_value=1.0,
@@ -191,6 +250,12 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
             # Set margin type from enum property
             margin_name = self._MARGIN_TYPE_MAP.get(self.margin_type, "Entire")
             gen.margin_type = getattr(m_tree.MarginType, margin_name)
+
+            # Set venation parameters
+            gen.enable_venation = self.enable_venation
+            if self.enable_venation:
+                venation_name = self._VENATION_TYPE_MAP.get(self.venation_type, "Open")
+                gen.venation_type = getattr(m_tree.VenationType, venation_name)
 
             cpp_mesh = gen.generate()
 
@@ -253,6 +318,18 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
                 if socket:
                     socket.property_value = float(preset.margin[key])
 
+        # Set venation parameters
+        if "enable_venation" in preset.venation:
+            self.enable_venation = bool(preset.venation["enable_venation"])
+        if "venation_type" in preset.venation:
+            vtype = preset.venation["venation_type"]
+            self.venation_type = _REVERSE_VENATION_MAP.get(vtype, "OPEN")
+        for key in ["vein_density", "kill_distance", "attraction_distance", "growth_step_size"]:
+            if key in preset.venation:
+                socket = self._get_socket_by_property(key)
+                if socket:
+                    socket.property_value = float(preset.venation[key])
+
         # Set deformation parameters
         for key, value in preset.deformation.items():
             socket = self._get_socket_by_property(key)
@@ -308,6 +385,28 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
             socket = self._get_socket_by_property(param)
             if socket and socket.is_property:
                 socket.draw(context, box, self, socket.name)
+
+        # Venation section
+        box = layout.box()
+        row = box.row()
+        show_ven = self.show_venation
+        row.prop(
+            self,
+            "show_venation",
+            icon="TRIA_DOWN" if show_ven else "TRIA_RIGHT",
+            icon_only=True,
+            emboss=False,
+        )
+        row.label(text="Venation")
+
+        if show_ven:
+            box.prop(self, "enable_venation")
+            if self.enable_venation:
+                box.prop(self, "venation_type")
+                for param in VENATION_PARAMS:
+                    socket = self._get_socket_by_property(param)
+                    if socket and socket.is_property:
+                        socket.draw(context, box, self, socket.name)
 
         # Surface deformation section
         self._draw_section(layout, "Surface", "show_surface", SURFACE_PARAMS)

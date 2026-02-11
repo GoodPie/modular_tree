@@ -41,9 +41,11 @@ struct LeafPreset
 	VenationType venation_type = VenationType::Open;
 	float vein_density = 800.0f;
 	float kill_distance = 0.03f;
+	float attraction_distance = 0.08f;
 	// Deformation
 	float midrib_curvature = 0.0f;
 	float cross_curvature = 0.0f;
+	float vein_displacement = 0.0f;
 	float edge_curl = 0.0f;
 };
 

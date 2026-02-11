@@ -16,6 +16,7 @@ FLOAT_ATTRIBUTES = [
     "stem_id",
     "hierarchy_depth",
     "branch_extent",
+    "vein_distance",
 ]
 
 VECTOR3_ATTRIBUTES = [
