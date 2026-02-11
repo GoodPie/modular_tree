@@ -99,6 +99,8 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
             if not output_links:
                 raise ValueError("No connected trunk node")
             trunk_function = output_links[0].to_node.construct_function()
+            if trunk_function is None:
+                raise ValueError("Connected node returned no tree function")
             tree.set_trunk_function(trunk_function)
             tree.execute_functions()
 

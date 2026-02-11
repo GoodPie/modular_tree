@@ -1,13 +1,19 @@
 #include "Tree.hpp"
 #include "Node.hpp"
 #include <iostream>
+#include <stdexcept>
 #include <vector>
 
 namespace Mtree
 {
 Tree::Tree(std::shared_ptr<TreeFunction> trunkFunction) { firstFunction = trunkFunction; }
 void Tree::set_first_function(std::shared_ptr<TreeFunction> function) { firstFunction = function; }
-void Tree::execute_functions() { firstFunction->execute(stems); }
+void Tree::execute_functions()
+{
+	if (!firstFunction)
+		throw std::runtime_error("Cannot execute tree: no trunk function set");
+	firstFunction->execute(stems);
+}
 
 void Tree::print_tree()
 {

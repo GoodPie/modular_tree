@@ -76,6 +76,11 @@ class AddLeavesModifier(bpy.types.Operator):
         default=100.0,
         min=0.0,
     )
+    enable_normal_transfer: bpy.props.BoolProperty(
+        name="Enable Normal Transfer",
+        description="Transfer proxy volume normals to leaves for smooth canopy shading",
+        default=True,
+    )
 
     def execute(self, context):
         ob = bpy.data.objects.get(self.object_id)
@@ -88,6 +93,7 @@ class AddLeavesModifier(bpy.types.Operator):
                 lod_1_distance=self.lod_1_distance,
                 cull_distance=self.cull_distance,
                 camera=bpy.context.scene.camera,
+                enable_normal_transfer=self.enable_normal_transfer,
             )
         return {"FINISHED"}
 

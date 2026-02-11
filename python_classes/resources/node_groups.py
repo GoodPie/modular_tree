@@ -224,6 +224,11 @@ def create_leaves_distribution_v2_node_group() -> NodeTree:
 
     ng.interface.new_socket(name="Camera", in_out="INPUT", socket_type="NodeSocketObject")
 
+    enable_normal_socket = ng.interface.new_socket(
+        name="Enable Normal Transfer", in_out="INPUT", socket_type="NodeSocketBool"
+    )
+    enable_normal_socket.default_value = True
+
     # Output
     ng.interface.new_socket(name="Geometry", in_out="OUTPUT", socket_type="NodeSocketGeometry")
 
@@ -594,13 +599,102 @@ def create_leaves_distribution_v2_node_group() -> NodeTree:
     links.new(realize_lod0.outputs["Geometry"], join_leaves.inputs[0])
     links.new(realize_lod1.outputs["Geometry"], join_leaves.inputs[0])
 
-    # Join leaves + tree geometry
-    join_all = nodes.new("GeometryNodeJoinGeometry")
-    join_all.location = (2100, 0)
-    links.new(group_input.outputs["Geometry"], join_all.inputs[0])
-    links.new(join_leaves.outputs["Geometry"], join_all.inputs[0])
+    # =========================================================================
+    # Normal transfer: sample proxy volume normals onto leaf surfaces
+    # =========================================================================
 
-    group_output.location = (2300, 0)
+    # Bounding box of tree geometry for proxy sizing
+    bound_box = nodes.new("GeometryNodeBoundBox")
+    bound_box.location = (1950, NODE_SPACING_Y * 6)
+    links.new(group_input.outputs["Geometry"], bound_box.inputs["Geometry"])
+
+    # Ico sphere as proxy volume
+    ico_sphere = nodes.new("GeometryNodeMeshIcoSphere")
+    ico_sphere.location = (1950, NODE_SPACING_Y * 8)
+    ico_sphere.inputs["Subdivisions"].default_value = 3
+    ico_sphere.inputs["Radius"].default_value = 1.0
+
+    # Compute bbox center: (min + max) / 2
+    add_bounds = nodes.new("ShaderNodeVectorMath")
+    add_bounds.location = (2150, NODE_SPACING_Y * 7)
+    add_bounds.operation = "ADD"
+    links.new(bound_box.outputs["Min"], add_bounds.inputs[0])
+    links.new(bound_box.outputs["Max"], add_bounds.inputs[1])
+
+    center_bounds = nodes.new("ShaderNodeVectorMath")
+    center_bounds.location = (2300, NODE_SPACING_Y * 7)
+    center_bounds.operation = "SCALE"
+    links.new(add_bounds.outputs["Vector"], center_bounds.inputs[0])
+    center_bounds.inputs["Scale"].default_value = 0.5
+
+    # Compute bbox half-extents: (max - min) * 0.6 (slightly larger for coverage)
+    sub_bounds = nodes.new("ShaderNodeVectorMath")
+    sub_bounds.location = (2150, NODE_SPACING_Y * 8.5)
+    sub_bounds.operation = "SUBTRACT"
+    links.new(bound_box.outputs["Max"], sub_bounds.inputs[0])
+    links.new(bound_box.outputs["Min"], sub_bounds.inputs[1])
+
+    radius_bounds = nodes.new("ShaderNodeVectorMath")
+    radius_bounds.location = (2300, NODE_SPACING_Y * 8.5)
+    radius_bounds.operation = "SCALE"
+    links.new(sub_bounds.outputs["Vector"], radius_bounds.inputs[0])
+    radius_bounds.inputs["Scale"].default_value = 0.6
+
+    # Transform ico sphere to cover tree bounding volume
+    transform_proxy = nodes.new("GeometryNodeTransform")
+    transform_proxy.location = (2450, NODE_SPACING_Y * 8)
+    links.new(ico_sphere.outputs["Mesh"], transform_proxy.inputs["Geometry"])
+    links.new(center_bounds.outputs["Vector"], transform_proxy.inputs["Translation"])
+    links.new(radius_bounds.outputs["Vector"], transform_proxy.inputs["Scale"])
+
+    # Sample normals from proxy at leaf positions
+    sample_proxy_normal = nodes.new("GeometryNodeSampleNearestSurface")
+    sample_proxy_normal.location = (2450, NODE_SPACING_Y * 5)
+    sample_proxy_normal.data_type = "FLOAT_VECTOR"
+    links.new(transform_proxy.outputs["Geometry"], sample_proxy_normal.inputs["Mesh"])
+
+    # Normal field evaluated on proxy surface
+    proxy_normal_input = nodes.new("GeometryNodeInputNormal")
+    proxy_normal_input.location = (2300, NODE_SPACING_Y * 4.5)
+    links.new(proxy_normal_input.outputs["Normal"], sample_proxy_normal.inputs["Value"])
+
+    # Leaf vertex positions for sampling
+    position_leaf_normal = nodes.new("GeometryNodeInputPosition")
+    position_leaf_normal.location = (2300, NODE_SPACING_Y * 3.5)
+    links.new(
+        position_leaf_normal.outputs["Position"],
+        sample_proxy_normal.inputs["Sample Position"],
+    )
+
+    # Store sampled normals as "leaf_normal" attribute
+    store_leaf_normal = nodes.new("GeometryNodeStoreNamedAttribute")
+    store_leaf_normal.location = (2650, NODE_SPACING_Y * 3)
+    store_leaf_normal.data_type = "FLOAT_VECTOR"
+    store_leaf_normal.domain = "POINT"
+    store_leaf_normal.inputs["Name"].default_value = "leaf_normal"
+    links.new(join_leaves.outputs["Geometry"], store_leaf_normal.inputs["Geometry"])
+    links.new(sample_proxy_normal.outputs["Value"], store_leaf_normal.inputs["Value"])
+
+    # Switch: enable/disable normal transfer
+    switch_normal_transfer = nodes.new("GeometryNodeSwitch")
+    switch_normal_transfer.location = (2850, NODE_SPACING_Y * 1)
+    switch_normal_transfer.input_type = "GEOMETRY"
+    links.new(
+        group_input.outputs["Enable Normal Transfer"],
+        switch_normal_transfer.inputs["Switch"],
+    )
+    links.new(join_leaves.outputs["Geometry"], switch_normal_transfer.inputs["False"])
+    links.new(store_leaf_normal.outputs["Geometry"], switch_normal_transfer.inputs["True"])
+
+    # =========================================================================
+    # Join leaves (with or without normal transfer) + tree geometry
+    # =========================================================================
+    join_all = nodes.new("GeometryNodeJoinGeometry")
+    join_all.location = (3050, 0)
+    links.new(group_input.outputs["Geometry"], join_all.inputs[0])
+    links.new(switch_normal_transfer.outputs["Output"], join_all.inputs[0])
+
+    group_output.location = (3250, 0)
     links.new(join_all.outputs["Geometry"], group_output.inputs["Geometry"])
 
     return ng
@@ -660,6 +754,7 @@ def distribute_leaves(
     lod_1_distance: float = 20.0,
     cull_distance: float = 100.0,
     camera: Object | None = None,
+    enable_normal_transfer: bool = True,
 ) -> None:
     """Add leaves distribution modifier to a tree object.
 
@@ -674,6 +769,7 @@ def distribute_leaves(
         lod_1_distance: Distance threshold for LOD 1 switching.
         cull_distance: Distance beyond which leaves are culled.
         camera: Camera object for distance-based LOD and billboard rotation.
+        enable_normal_transfer: Whether to transfer proxy volume normals to leaves.
 
     Raises:
         ValueError: If the object is missing required vertex attributes.
@@ -752,3 +848,8 @@ def distribute_leaves(
         socket_id = _find_socket_identifier(node_group, "Camera")
         if socket_id is not None:
             modifier[socket_id] = camera
+
+    if not enable_normal_transfer:
+        socket_id = _find_socket_identifier(node_group, "Enable Normal Transfer")
+        if socket_id is not None:
+            modifier[socket_id] = enable_normal_transfer
