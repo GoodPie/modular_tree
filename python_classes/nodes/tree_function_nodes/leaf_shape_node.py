@@ -362,7 +362,10 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
             if key in preset.margin:
                 socket = self._get_socket_by_property(key)
                 if socket:
-                    socket.property_value = float(preset.margin[key])
+                    if key == "tooth_count":
+                        socket.property_value = int(preset.margin[key])
+                    else:
+                        socket.property_value = float(preset.margin[key])
 
         # Set venation parameters
         if "enable_venation" in preset.venation:

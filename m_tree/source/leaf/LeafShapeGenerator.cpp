@@ -180,7 +180,8 @@ Mesh LeafShapeGenerator::triangulate(const std::vector<Vector2>& contour)
 	centroid /= static_cast<float>(n);
 
 	// Number of inner rings
-	int num_rings = std::clamp(contour_resolution / 16, 1, 8);
+	int effective_resolution = std::max(contour_resolution, 8);
+	int num_rings = std::clamp(effective_resolution / 16, 1, 8);
 
 	// Generate inner ring vertices (rings 1..num_rings), each ring has n vertices
 	for (int r = 1; r <= num_rings; ++r)
@@ -363,13 +364,6 @@ void LeafShapeGenerator::compute_uvs(Mesh& mesh, const std::vector<Vector2>& con
 
 Mesh LeafShapeGenerator::generate()
 {
-	// Parameter validation
-	if (std::abs(n1) < 0.001f)
-	{
-		n1 = (n1 >= 0.0f) ? 0.001f : -0.001f;
-	}
-	contour_resolution = std::max(contour_resolution, 8);
-
 	// Pipeline
 	std::vector<Vector2> contour = sample_contour();
 	contour = apply_margin(contour);
