@@ -70,11 +70,18 @@ def _get_or_create_resource_collection():
 
 
 def _create_procedural_leaf() -> Object:
-    """Create a procedural leaf using LeafShapeGenerator."""
+    """Create a procedural leaf using LeafShapeGenerator with a random preset."""
+    import random
+
     from ..m_tree_wrapper import lazy_m_tree as m_tree
     from ..mesh_utils import create_leaf_mesh_from_cpp
+    from ..presets.leaf_presets import LEAF_PRESETS, apply_preset_to_generator
 
     gen = m_tree.LeafShapeGenerator()
+    preset_name = random.choice(list(LEAF_PRESETS.keys()))
+    apply_preset_to_generator(gen, preset_name)
+    gen.seed = random.randint(0, 10000)
+    gen.asymmetry_seed = random.randint(0, 10000)
     cpp_mesh = gen.generate()
 
     mesh = bpy.data.meshes.new(DEFAULT_LEAF_NAME)

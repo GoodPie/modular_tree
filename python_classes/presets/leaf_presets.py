@@ -213,3 +213,66 @@ LEAF_PRESETS: dict[str, LeafPreset] = {
 def get_leaf_preset_items() -> list[tuple[str, str, str]]:
     """Return preset items suitable for Blender EnumProperty."""
     return [preset.to_enum_item() for preset in LEAF_PRESETS.values()]
+
+
+# Maps from integer constants to C++ enum value names
+_INT_TO_MARGIN_NAME: dict[int, str] = {
+    MARGIN_ENTIRE: "Entire",
+    MARGIN_SERRATE: "Serrate",
+    MARGIN_DENTATE: "Dentate",
+    MARGIN_CRENATE: "Crenate",
+    MARGIN_LOBED: "Lobed",
+}
+
+_INT_TO_VENATION_NAME: dict[int, str] = {
+    VENATION_OPEN: "Open",
+    VENATION_CLOSED: "Closed",
+}
+
+
+def apply_preset_to_generator(gen: Any, preset_name: str, *, _m_tree: Any = None) -> None:
+    """Apply a LeafPreset's parameters to a C++ LeafShapeGenerator.
+
+    Sets contour, margin, venation, and deformation params on *gen*.
+    Does NOT set seed or asymmetry_seed (caller's responsibility).
+
+    Args:
+        gen: A ``LeafShapeGenerator`` instance (from the C++ bindings).
+        preset_name: Key into ``LEAF_PRESETS`` (e.g. ``"OAK"``).
+        _m_tree: Optional m_tree module override for testability.
+            When *None*, uses the lazy wrapper from ``m_tree_wrapper``.
+
+    Raises:
+        KeyError: If *preset_name* is not in ``LEAF_PRESETS``.
+    """
+    preset = LEAF_PRESETS[preset_name]  # raises KeyError if invalid
+
+    if _m_tree is None:
+        from ..m_tree_wrapper import lazy_m_tree as _m_tree
+
+    # Contour
+    for key, value in preset.contour.items():
+        setattr(gen, key, value)
+
+    # Margin
+    margin_int = preset.margin.get("margin_type", MARGIN_ENTIRE)
+    margin_name = _INT_TO_MARGIN_NAME[margin_int]
+    gen.margin_type = getattr(_m_tree.MarginType, margin_name)
+    for key in ("tooth_count", "tooth_depth", "tooth_sharpness"):
+        if key in preset.margin:
+            setattr(gen, key, preset.margin[key])
+
+    # Venation
+    gen.enable_venation = preset.venation.get("enable_venation", False)
+    if gen.enable_venation:
+        ven_int = preset.venation.get("venation_type", VENATION_OPEN)
+        ven_name = _INT_TO_VENATION_NAME[ven_int]
+        gen.venation_type = getattr(_m_tree.VenationType, ven_name)
+        for key in ("vein_density", "kill_distance", "attraction_distance", "growth_step_size"):
+            if key in preset.venation:
+                setattr(gen, key, preset.venation[key])
+
+    # Deformation
+    for key, value in preset.deformation.items():
+        if hasattr(gen, key):
+            setattr(gen, key, value)

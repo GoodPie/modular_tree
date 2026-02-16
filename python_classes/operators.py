@@ -11,8 +11,14 @@ from bpy.utils import register_class, unregister_class
 from .m_tree_wrapper import lazy_m_tree as m_tree
 from .mesh_utils import create_mesh_from_cpp
 from .pivot_painter import ExportFormat, PivotPainterExporter
-from .presets import apply_preset, apply_trunk_preset, get_growth_preset_items, get_preset_items
-from .presets.leaf_presets import get_leaf_preset_items
+from .presets import (
+    apply_preset,
+    apply_preset_to_generator,
+    apply_trunk_preset,
+    get_growth_preset_items,
+    get_preset_items,
+)
+from .presets.leaf_presets import LEAF_PRESETS, get_leaf_preset_items
 from .resources.node_groups import distribute_leaves
 
 
@@ -113,6 +119,13 @@ class QuickGenerateTree(bpy.types.Operator):
         name="Add Leaves", default=True, description="Automatically add leaf distribution"
     )
 
+    # Maps tree presets to matching leaf presets
+    _TREE_TO_LEAF_PRESET = {
+        "OAK": "OAK",
+        "PINE": "PINE",
+        "WILLOW": "WILLOW",
+    }
+
     def execute(self, context):
         try:
             seed = self.seed if self.seed != 0 else randint(0, 10000)
@@ -124,7 +137,8 @@ class QuickGenerateTree(bpy.types.Operator):
             if self.add_leaves:
                 active_obj = context.view_layer.objects.active
                 if active_obj is not None:
-                    distribute_leaves(active_obj)
+                    leaf_obj = self._create_leaf_for_preset(seed)
+                    distribute_leaves(active_obj, leaf_object=leaf_obj)
 
             elapsed = time.time() - start_time
             self.report({"INFO"}, f"Generated tree (seed={seed}) in {elapsed:.2f}s")
@@ -164,6 +178,37 @@ class QuickGenerateTree(bpy.types.Operator):
         obj.select_set(True)
 
         create_mesh_from_cpp(mesh, cpp_mesh)
+
+    def _create_leaf_for_preset(self, seed: int):
+        """Create a unique procedural leaf matching the tree preset."""
+        import random
+
+        from .mesh_utils import create_leaf_mesh_from_cpp
+        from .resources.node_groups import _get_or_create_resource_collection
+
+        # Pick leaf preset based on tree preset
+        if self.preset == "RANDOM":
+            leaf_preset_name = random.choice(list(LEAF_PRESETS.keys()))
+        else:
+            leaf_preset_name = self._TREE_TO_LEAF_PRESET.get(
+                self.preset, random.choice(list(LEAF_PRESETS.keys()))
+            )
+
+        gen = m_tree.LeafShapeGenerator()
+        apply_preset_to_generator(gen, leaf_preset_name)
+        gen.seed = seed
+        gen.asymmetry_seed = seed
+
+        cpp_mesh = gen.generate()
+
+        obj_name = f"Leaf_{seed}"
+        mesh = bpy.data.meshes.new(obj_name)
+        obj = bpy.data.objects.new(obj_name, mesh)
+        create_leaf_mesh_from_cpp(mesh, cpp_mesh)
+
+        collection = _get_or_create_resource_collection()
+        collection.objects.link(obj)
+        return obj
 
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self)

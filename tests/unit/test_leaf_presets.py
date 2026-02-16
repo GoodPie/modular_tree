@@ -1,7 +1,27 @@
 """Unit tests for leaf species preset data."""
 
+import pytest
+
 # Import directly from module (path setup in conftest.py)
-from leaf_presets import LEAF_PRESETS, LeafPreset, get_leaf_preset_items
+from leaf_presets import (
+    LEAF_PRESETS,
+    LeafPreset,
+    apply_preset_to_generator,
+    get_leaf_preset_items,
+)
+
+# Check if m_tree native module is available
+try:
+    from m_tree import m_tree as mt  # noqa: F401
+
+    HAS_NATIVE_MODULE = True
+except ImportError:
+    HAS_NATIVE_MODULE = False
+
+requires_native = pytest.mark.skipif(
+    not HAS_NATIVE_MODULE,
+    reason="m_tree native module not installed (build with ./build_mtree.osx)",
+)
 
 EXPECTED_PRESETS = ["OAK", "MAPLE", "BIRCH", "WILLOW", "PINE"]
 
@@ -167,3 +187,78 @@ def test_get_leaf_preset_items():
         assert isinstance(item[0], str)
         assert isinstance(item[1], str)
         assert isinstance(item[2], str)
+
+
+# =====================================================================
+# Tests for apply_preset_to_generator (requires native C++ module)
+# =====================================================================
+
+
+@requires_native
+def test_apply_preset_contour_params():
+    """apply_preset_to_generator sets contour params correctly (OAK)."""
+    gen = mt.LeafShapeGenerator()
+    apply_preset_to_generator(gen, "OAK", _m_tree=mt)
+    assert gen.m == 7.0
+    assert gen.n1 == 2.0
+    assert gen.n2 == 4.0
+    assert gen.n3 == 4.0
+    assert gen.aspect_ratio == pytest.approx(0.7)
+
+
+@requires_native
+def test_apply_preset_margin_type_and_tooth():
+    """apply_preset_to_generator sets margin type and tooth params (OAK -> Lobed)."""
+    gen = mt.LeafShapeGenerator()
+    apply_preset_to_generator(gen, "OAK", _m_tree=mt)
+    assert gen.margin_type == mt.MarginType.Lobed
+    assert gen.tooth_count == 7
+    assert gen.tooth_depth == pytest.approx(0.3)
+
+
+@requires_native
+def test_apply_preset_venation_enabled():
+    """BIRCH preset enables venation."""
+    gen = mt.LeafShapeGenerator()
+    apply_preset_to_generator(gen, "BIRCH", _m_tree=mt)
+    assert gen.enable_venation is True
+
+
+@requires_native
+def test_apply_preset_venation_disabled():
+    """PINE preset disables venation."""
+    gen = mt.LeafShapeGenerator()
+    apply_preset_to_generator(gen, "PINE", _m_tree=mt)
+    assert gen.enable_venation is False
+
+
+@requires_native
+def test_apply_preset_does_not_set_seed():
+    """apply_preset_to_generator must NOT modify seed or asymmetry_seed."""
+    gen = mt.LeafShapeGenerator()
+    original_seed = gen.seed
+    original_asym = gen.asymmetry_seed
+    apply_preset_to_generator(gen, "OAK", _m_tree=mt)
+    assert gen.seed == original_seed
+    assert gen.asymmetry_seed == original_asym
+
+
+@requires_native
+@pytest.mark.parametrize("preset_name", list(LEAF_PRESETS.keys()))
+def test_apply_preset_produces_valid_mesh(preset_name):
+    """All 5 presets produce meshes with vertices and faces."""
+    gen = mt.LeafShapeGenerator()
+    apply_preset_to_generator(gen, preset_name, _m_tree=mt)
+    gen.seed = 123
+    gen.asymmetry_seed = 456
+    mesh = gen.generate()
+    assert len(mesh.vertices) > 0
+    assert len(mesh.triangles) > 0
+
+
+@requires_native
+def test_apply_preset_invalid_name_raises():
+    """Invalid preset name raises KeyError."""
+    gen = mt.LeafShapeGenerator()
+    with pytest.raises(KeyError):
+        apply_preset_to_generator(gen, "NONEXISTENT", _m_tree=mt)

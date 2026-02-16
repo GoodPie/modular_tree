@@ -274,6 +274,7 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
     def generate_leaf(self):
         """Create or update leaf mesh object from current parameters."""
         import time
+        from random import randint
 
         self.status_message = ""
         self.status_is_error = False
@@ -290,6 +291,10 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
                 prop_name = input_socket.property_name
                 if hasattr(gen, prop_name):
                     setattr(gen, prop_name, input_socket.property_value)
+
+            # Randomize seed so each generate click produces varied venation
+            gen.seed = randint(0, 10000)
+            gen.asymmetry_seed = randint(0, 10000)
 
             # Set margin type from enum property
             margin_name = self._MARGIN_TYPE_MAP.get(self.margin_type, "Entire")
