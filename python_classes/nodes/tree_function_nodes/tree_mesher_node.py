@@ -9,10 +9,11 @@ import bpy
 from ...m_tree_wrapper import lazy_m_tree as m_tree
 from ...mesh_utils import create_mesh_from_cpp
 from ..base_types.node import MtreeNode
+from ..debounce import schedule_build
 
 
 def on_update_prop(node, context):
-    node.build_tree()
+    schedule_build(node)
 
 
 class TreeMesherNode(bpy.types.Node, MtreeNode):

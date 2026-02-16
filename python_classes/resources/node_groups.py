@@ -8,7 +8,7 @@ from bpy.types import NodeTree, Object
 # =============================================================================
 # Version constant - increment when changing node group implementation
 # =============================================================================
-NODE_GROUP_VERSION = 2
+NODE_GROUP_VERSION = 3
 
 # =============================================================================
 # Node layout constants
@@ -308,11 +308,11 @@ def create_leaves_distribution_v2_node_group() -> NodeTree:
     position_dir.location = (_COL_SAMPLE_DIR - NODE_SPACING_X, -NODE_SPACING_Y * 3.3)
     links.new(position_dir.outputs["Position"], sample_direction.inputs["Sample Position"])
 
-    # Align Euler to Vector
-    align_euler = nodes.new("FunctionNodeAlignEulerToVector")
-    align_euler.location = (_COL_ALIGN, -NODE_SPACING_Y)
-    align_euler.axis = "Z"
-    links.new(sample_direction.outputs["Value"], align_euler.inputs["Vector"])
+    # Align Rotation to Vector
+    align_rotation = nodes.new("FunctionNodeAlignRotationToVector")
+    align_rotation.location = (_COL_ALIGN, -NODE_SPACING_Y)
+    align_rotation.axis = "Z"
+    links.new(sample_direction.outputs["Value"], align_rotation.inputs["Vector"])
 
     # Random rotation variation
     random_rot = nodes.new("FunctionNodeRandomValue")
@@ -390,11 +390,15 @@ def create_leaves_distribution_v2_node_group() -> NodeTree:
     # =========================================================================
     # Combine rotations (v2: uses switch output instead of direct multiply_rot)
     # =========================================================================
-    rotate_euler = nodes.new("FunctionNodeRotateEuler")
-    rotate_euler.location = (_COL_ROTATE, -NODE_SPACING_Y)
-    links.new(align_euler.outputs["Rotation"], rotate_euler.inputs["Rotation"])
+    rotate_rotation = nodes.new("FunctionNodeRotateRotation")
+    rotate_rotation.location = (_COL_ROTATE, -NODE_SPACING_Y)
+    links.new(align_rotation.outputs["Rotation"], rotate_rotation.inputs["Rotation"])
     # v2 change: rotation comes from switch (random or phyllotaxis)
-    links.new(switch_rotation.outputs["Output"], rotate_euler.inputs["Rotate By"])
+    # Convert Euler vector to Rotation type before connecting
+    euler_to_rotation = nodes.new("FunctionNodeEulerToRotation")
+    euler_to_rotation.location = (_COL_ROTATE, -NODE_SPACING_Y * 2)
+    links.new(switch_rotation.outputs["Output"], euler_to_rotation.inputs["Euler"])
+    links.new(euler_to_rotation.outputs["Rotation"], rotate_rotation.inputs["Rotate By"])
 
     # =========================================================================
     # Scale computation (same as v1)
@@ -508,17 +512,17 @@ def create_leaves_distribution_v2_node_group() -> NodeTree:
     # =========================================================================
 
     # Camera-facing: align Z axis toward camera direction
-    align_billboard_camera = nodes.new("FunctionNodeAlignEulerToVector")
+    align_billboard_camera = nodes.new("FunctionNodeAlignRotationToVector")
     align_billboard_camera.location = (1000, NODE_SPACING_Y * 6)
     align_billboard_camera.axis = "Z"
     links.new(normalize_cam.outputs["Vector"], align_billboard_camera.inputs["Vector"])
 
     # Axial: branch-aligned Z, rotate X toward camera
-    align_billboard_axial = nodes.new("FunctionNodeAlignEulerToVector")
+    align_billboard_axial = nodes.new("FunctionNodeAlignRotationToVector")
     align_billboard_axial.location = (1000, NODE_SPACING_Y * 5)
     align_billboard_axial.axis = "X"
     align_billboard_axial.pivot_axis = "Z"
-    links.new(align_euler.outputs["Rotation"], align_billboard_axial.inputs["Rotation"])
+    links.new(align_rotation.outputs["Rotation"], align_billboard_axial.inputs["Rotation"])
     links.new(normalize_cam.outputs["Vector"], align_billboard_axial.inputs["Vector"])
 
     # Switch 1: Billboard Mode > 0 → axial, else existing rotation
@@ -533,7 +537,7 @@ def create_leaves_distribution_v2_node_group() -> NodeTree:
     switch_billboard_1.location = (1300, NODE_SPACING_Y * 5)
     switch_billboard_1.input_type = "ROTATION"
     links.new(compare_billboard_1.outputs["Result"], switch_billboard_1.inputs["Switch"])
-    links.new(rotate_euler.outputs["Rotation"], switch_billboard_1.inputs["False"])
+    links.new(rotate_rotation.outputs["Rotation"], switch_billboard_1.inputs["False"])
     links.new(align_billboard_axial.outputs["Rotation"], switch_billboard_1.inputs["True"])
 
     # Switch 2: Billboard Mode > 1 → camera-facing, else axial/existing

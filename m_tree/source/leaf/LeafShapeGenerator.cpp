@@ -323,18 +323,16 @@ void LeafShapeGenerator::apply_deformation(Mesh& mesh, const std::vector<Vector2
 		v.z() = z;
 	}
 
-	// 4. Vein displacement: raise surface along vein paths
+	// 4. Vein displacement: raise surface along vein paths using width-aware influence
 	if (vein_displacement != 0.0f)
 	{
-		auto it = mesh.attributes.find("vein_distance");
+		auto it = mesh.attributes.find("vein_influence");
 		if (it != mesh.attributes.end())
 		{
-			auto& vein_dist = static_cast<Attribute<float>&>(*it->second);
+			auto& vein_inf = static_cast<Attribute<float>&>(*it->second);
 			for (size_t i = 0; i < mesh.vertices.size(); ++i)
 			{
-				float dist = vein_dist.data[i];
-				float influence = std::exp(-dist * 50.0f);
-				mesh.vertices[i].z() += vein_displacement * influence * 0.5f;
+				mesh.vertices[i].z() += vein_displacement * vein_inf.data[i] * 0.5f;
 			}
 		}
 	}
@@ -379,6 +377,23 @@ Mesh LeafShapeGenerator::generate()
 	compute_uvs(mesh, contour);
 	apply_venation(mesh, contour);
 	apply_deformation(mesh, contour);
+
+	// Shift origin to tip of leaf (max Y point on contour)
+	float max_y = -std::numeric_limits<float>::max();
+	float tip_x = 0.0f;
+	for (const auto& pt : contour)
+	{
+		if (pt.y() > max_y)
+		{
+			max_y = pt.y();
+			tip_x = pt.x();
+		}
+	}
+	for (auto& v : mesh.vertices)
+	{
+		v.x() -= tip_x;
+		v.y() -= max_y;
+	}
 
 	return mesh;
 }

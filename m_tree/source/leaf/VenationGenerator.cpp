@@ -407,30 +407,52 @@ void VenationGenerator::compute_vein_distances(Mesh& mesh, const std::vector<Vei
 	if (veins.empty() || mesh.vertices.empty())
 		return;
 
-	auto& attr = mesh.add_attribute<float>("vein_distance");
-	attr.data.resize(mesh.vertices.size());
+	auto& dist_attr = mesh.add_attribute<float>("vein_distance");
+	dist_attr.data.resize(mesh.vertices.size());
+
+	auto& influence_attr = mesh.add_attribute<float>("vein_influence");
+	influence_attr.data.resize(mesh.vertices.size());
+
+	// Find max width for normalization
+	float max_width = 1.0f;
+	for (const auto& node : veins)
+		max_width = std::max(max_width, node.width);
 
 	for (size_t vi = 0; vi < mesh.vertices.size(); ++vi)
 	{
 		Vector2 vpos(mesh.vertices[vi].x(), mesh.vertices[vi].y());
 		float min_dist = std::numeric_limits<float>::max();
+		float max_influence = 0.0f;
 
 		// Check distance to each vein segment
 		for (size_t ni = 0; ni < veins.size(); ++ni)
 		{
+			float d;
+			float w;
+
 			if (veins[ni].parent < 0)
 			{
 				// Root node: check point distance
-				float d = (vpos - veins[ni].position).norm();
-				min_dist = std::min(min_dist, d);
-				continue;
+				d = (vpos - veins[ni].position).norm();
+				w = veins[ni].width / max_width;
 			}
-			float d =
-			    distance_to_segment(vpos, veins[veins[ni].parent].position, veins[ni].position);
+			else
+			{
+				d = distance_to_segment(vpos, veins[veins[ni].parent].position, veins[ni].position);
+				// Average width of segment endpoints
+				w = (veins[ni].width + veins[veins[ni].parent].width) * 0.5f / max_width;
+			}
+
 			min_dist = std::min(min_dist, d);
+
+			// Width-aware influence: thicker veins (midrib) get broader, stronger influence
+			float falloff_width = w * 0.06f + 0.005f;
+			float influence = w * std::exp(-d / falloff_width);
+			max_influence = std::max(max_influence, influence);
 		}
 
-		attr.data[vi] = min_dist;
+		dist_attr.data[vi] = min_dist;
+		influence_attr.data[vi] = max_influence;
 	}
 }
 
