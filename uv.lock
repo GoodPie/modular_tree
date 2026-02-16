@@ -31,7 +31,7 @@ wheels = [
 
 [[package]]
 name = "modular-tree"
-version = "5.3.3"
+version = "5.4.0"
 source = { virtual = "." }
 
 [package.dev-dependencies]
