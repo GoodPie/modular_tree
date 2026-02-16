@@ -131,9 +131,9 @@ class TestLeafShapeGeneratorParameters:
         verts_serrate = np.array(mesh_serrate.get_vertices())
 
         # Serrate margin should produce different geometry
-        assert not np.array_equal(
-            verts_entire, verts_serrate
-        ), "Serrate margin should differ from Entire"
+        assert not np.array_equal(verts_entire, verts_serrate), (
+            "Serrate margin should differ from Entire"
+        )
 
     def test_all_margin_types_generate(self):
         """All margin types produce valid meshes."""
@@ -250,9 +250,9 @@ class TestLeafShapeGeneratorVenation:
         gen.enable_venation = False
         mesh = gen.generate()
 
-        assert not mesh.has_float_attribute(
-            "vein_distance"
-        ), "vein_distance should not exist when venation is disabled"
+        assert not mesh.has_float_attribute("vein_distance"), (
+            "vein_distance should not exist when venation is disabled"
+        )
 
     def test_venation_enabled_has_attribute(self):
         """With venation enabled, vein_distance attribute should exist."""
@@ -263,9 +263,9 @@ class TestLeafShapeGeneratorVenation:
         gen.vein_density = 500.0
         mesh = gen.generate()
 
-        assert mesh.has_float_attribute(
-            "vein_distance"
-        ), "vein_distance should exist when venation is enabled"
+        assert mesh.has_float_attribute("vein_distance"), (
+            "vein_distance should exist when venation is enabled"
+        )
 
     def test_venation_distances_non_negative(self):
         """Vein distance values should be non-negative."""
@@ -311,9 +311,9 @@ class TestLeafShapeGeneratorVenation:
 
         verts = np.array(mesh.get_vertices()).reshape(-1, 3)
         z_range = verts[:, 2].max() - verts[:, 2].min()
-        assert (
-            z_range > 0.05
-        ), f"Vein displacement should produce visible Z offset (>0.05), got {z_range}"
+        assert z_range > 0.05, (
+            f"Vein displacement should produce visible Z offset (>0.05), got {z_range}"
+        )
 
 
 @requires_native
@@ -429,9 +429,9 @@ class TestLeafPresetApplication:
         # At least Oak and Pine should be very different
         oak_x, oak_y, _ = meshes["Oak"]
         pine_x, pine_y, _ = meshes["Pine"]
-        assert (
-            abs(oak_x - pine_x) > 0.01 or abs(oak_y - pine_y) > 0.01
-        ), "Oak and Pine should produce visually distinct shapes"
+        assert abs(oak_x - pine_x) > 0.01 or abs(oak_y - pine_y) > 0.01, (
+            "Oak and Pine should produce visually distinct shapes"
+        )
 
     def test_invalid_preset_name_returns_none(self):
         """get_leaf_preset with invalid name returns None."""
