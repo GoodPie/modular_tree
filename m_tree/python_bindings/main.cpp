@@ -260,6 +260,13 @@ PYBIND11_MODULE(m_tree, m) {
                     return false;
                 return dynamic_cast<Attribute<float>*>(it->second.get()) != nullptr;
             })
+        .def("has_vector3_attribute", [](const Mesh& mesh, std::string name)
+            {
+                auto it = mesh.attributes.find(name);
+                if (it == mesh.attributes.end())
+                    return false;
+                return dynamic_cast<Attribute<Vector3>*>(it->second.get()) != nullptr;
+            })
         .def("get_float_attribute", [](const Mesh& mesh, std::string name)
             {
                 if (mesh.attributes.count(name) == 0)

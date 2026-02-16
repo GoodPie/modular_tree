@@ -114,8 +114,9 @@ std::vector<Vector2> LeafShapeGenerator::apply_margin(const std::vector<Vector2>
 		case MarginType::Serrate:
 		{
 			// Asymmetric sawtooth wave (teeth point toward tip)
-			float saw = frac < tooth_sharpness ? frac / tooth_sharpness
-			                                   : (1.0f - frac) / (1.0f - tooth_sharpness);
+			float safe_sharpness = std::clamp(tooth_sharpness, 0.001f, 0.999f);
+			float saw = frac < safe_sharpness ? frac / safe_sharpness
+			                                  : (1.0f - frac) / (1.0f - safe_sharpness);
 			mod = depth * saw;
 			break;
 		}
@@ -237,6 +238,11 @@ Mesh LeafShapeGenerator::triangulate(const std::vector<Vector2>& contour)
 LeafShapeGenerator::BBox2D
 LeafShapeGenerator::compute_contour_bbox(const std::vector<Vector2>& contour) const
 {
+	if (contour.empty())
+	{
+		return {0, 0, 0, 0, 0, 0, 0};
+	}
+
 	BBox2D bb;
 	bb.min_x = contour[0].x();
 	bb.max_x = contour[0].x();

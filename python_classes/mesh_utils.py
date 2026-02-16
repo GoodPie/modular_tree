@@ -17,6 +17,7 @@ FLOAT_ATTRIBUTES = [
     "hierarchy_depth",
     "branch_extent",
     "vein_distance",
+    "phyllotaxis_angle",
 ]
 
 VECTOR3_ATTRIBUTES = [
@@ -72,6 +73,8 @@ def _add_attributes(mesh: bpy.types.Mesh, cpp_mesh) -> None:
         mesh.attributes[attr_name].data.foreach_set("value", data)
 
     for attr_name in VECTOR3_ATTRIBUTES:
+        if not cpp_mesh.has_vector3_attribute(attr_name):
+            continue
         data = cpp_mesh.get_vector3_attribute(attr_name)
         if attr_name in mesh.attributes:
             mesh.attributes.remove(mesh.attributes[attr_name])
