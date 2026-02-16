@@ -7,7 +7,7 @@ import bpy
 from ...m_tree_wrapper import lazy_m_tree as m_tree
 from ...mesh_utils import create_leaf_mesh_from_cpp
 from ...presets.leaf_presets import LEAF_PRESETS
-from ..base_types.node import MtreeFunctionNode, MtreeNode
+from ..base_types.node import MtreeNode
 
 # Socket parameter definitions for organized access
 CONTOUR_PARAMS = ["m", "a", "b", "n1", "n2", "n3", "aspect_ratio"]
@@ -100,10 +100,6 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
     }
 
     def init(self, context):
-        # Tree I/O
-        self.add_input("mt_TreeSocket", "Tree", is_property=False)
-        self.add_output("mt_TreeSocket", "Tree", is_property=False)
-
         # Contour sockets
         self.add_input(
             "mt_FloatSocket",
@@ -485,11 +481,3 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
                 socket = self._get_socket_by_property(param)
                 if socket and socket.is_property:
                     socket.draw(bpy.context, box, self, socket.name)
-
-    def construct_function(self):
-        """Pass-through: leaf shape nodes don't create tree functions."""
-        # Pass through to child nodes
-        for child in self.get_child_nodes():
-            if isinstance(child, MtreeFunctionNode):
-                return child.construct_function()
-        return None
