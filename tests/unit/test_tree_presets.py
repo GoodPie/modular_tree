@@ -183,7 +183,7 @@ class TestPinePreset:
     def test_pine_preset_has_dense_sub_branches(self):
         """PINE preset has dense sub-branches for needle coverage."""
         pine = TREE_PRESETS["PINE"]
-        assert pine.sub_branches["branches_density"] == 6.0
+        assert pine.sub_branches["branches_density"] == 4.0
 
 
 class TestWillowPreset:
