@@ -153,7 +153,7 @@ LEAF_PRESETS: dict[str, LeafPreset] = {
             "n1": 3.0,
             "n2": 10.0,
             "n3": 10.0,
-            "aspect_ratio": 0.2,
+            "aspect_ratio": 0.35,
         },
         margin={
             "margin_type": MARGIN_ENTIRE,

@@ -770,6 +770,9 @@ def distribute_leaves(
     cull_distance: float = 100.0,
     camera: Object | None = None,
     enable_normal_transfer: bool = True,
+    density: float = DEFAULT_LEAF_DENSITY,
+    scale: float = DEFAULT_LEAF_SCALE,
+    max_radius: float = DEFAULT_MAX_RADIUS,
 ) -> None:
     """Add leaves distribution modifier to a tree object.
 
@@ -868,3 +871,18 @@ def distribute_leaves(
         socket_id = _find_socket_identifier(node_group, "Enable Normal Transfer")
         if socket_id is not None:
             modifier[socket_id] = enable_normal_transfer
+
+    if density != DEFAULT_LEAF_DENSITY:
+        socket_id = _find_socket_identifier(node_group, "Density")
+        if socket_id is not None:
+            modifier[socket_id] = density
+
+    if scale != DEFAULT_LEAF_SCALE:
+        socket_id = _find_socket_identifier(node_group, "Scale")
+        if socket_id is not None:
+            modifier[socket_id] = scale
+
+    if max_radius != DEFAULT_MAX_RADIUS:
+        socket_id = _find_socket_identifier(node_group, "Max Radius")
+        if socket_id is not None:
+            modifier[socket_id] = max_radius

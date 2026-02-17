@@ -12,8 +12,10 @@ from .m_tree_wrapper import lazy_m_tree as m_tree
 from .mesh_utils import create_mesh_from_cpp
 from .pivot_painter import ExportFormat, PivotPainterExporter
 from .presets import (
+    TREE_PRESETS,
     apply_preset,
     apply_preset_to_generator,
+    apply_sub_branch_preset,
     apply_trunk_preset,
     get_growth_preset_items,
     get_preset_items,
@@ -138,7 +140,11 @@ class QuickGenerateTree(bpy.types.Operator):
                 active_obj = context.view_layer.objects.active
                 if active_obj is not None:
                     leaf_obj = self._create_leaf_for_preset(seed)
-                    distribute_leaves(active_obj, leaf_object=leaf_obj)
+                    leaf_kwargs = {}
+                    preset = TREE_PRESETS.get(self.preset)
+                    if preset and preset.leaf_params:
+                        leaf_kwargs = preset.leaf_params
+                    distribute_leaves(active_obj, leaf_object=leaf_obj, **leaf_kwargs)
 
             elapsed = time.time() - start_time
             self.report({"INFO"}, f"Generated tree (seed={seed}) in {elapsed:.2f}s")
@@ -159,6 +165,13 @@ class QuickGenerateTree(bpy.types.Operator):
         branches = m_tree.BranchFunction()
         branches.seed = seed + 1
         apply_preset(branches, self.preset)
+
+        preset = TREE_PRESETS.get(self.preset)
+        if preset and preset.sub_branches:
+            sub_branches = m_tree.BranchFunction()
+            sub_branches.seed = seed + 2
+            apply_sub_branch_preset(sub_branches, self.preset)
+            branches.add_child(sub_branches)
 
         trunk.add_child(branches)
         tree.set_trunk_function(trunk)

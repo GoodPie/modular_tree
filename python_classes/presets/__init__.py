@@ -6,6 +6,7 @@ from .tree_presets import (
     _generate_random_params,
     apply_growth_preset,
     apply_preset,
+    apply_sub_branch_preset,
     apply_trunk_preset,
     get_growth_preset_items,
     get_preset_items,
