@@ -252,8 +252,8 @@ def test_apply_preset_produces_valid_mesh(preset_name):
     gen.seed = 123
     gen.asymmetry_seed = 456
     mesh = gen.generate()
-    assert len(mesh.vertices) > 0
-    assert len(mesh.triangles) > 0
+    assert len(mesh.get_vertices()) > 0
+    assert len(mesh.get_polygons()) > 0
 
 
 @requires_native

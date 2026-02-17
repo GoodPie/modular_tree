@@ -22,7 +22,10 @@ float LeafShapeGenerator::superformula_radius(float theta, float effective_n1) c
 	if (sum < 1e-10f)
 		return 1.0f;
 
-	return std::pow(sum, -1.0f / effective_n1);
+	float result = std::pow(sum, -1.0f / effective_n1);
+	if (!std::isfinite(result))
+		return 1.0f;
+	return result;
 }
 
 std::vector<Vector2> LeafShapeGenerator::sample_contour()
