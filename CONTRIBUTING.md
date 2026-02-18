@@ -58,6 +58,58 @@ cd m_tree/build
 ./binaries/m_tree_tests
 ```
 
+## Memory Safety Testing
+
+The project uses compiler sanitizers to detect memory errors, undefined behavior, and threading issues. These run automatically in CI on every push and pull request.
+
+### CI Workflow
+
+The sanitizer workflow (`.github/workflows/sanitizers.yml`) runs three sanitizers on Linux:
+
+| Sanitizer | Detects |
+|-----------|---------|
+| **ASan** (AddressSanitizer) | Buffer overflows, use-after-free, memory leaks |
+| **UBSan** (UndefinedBehaviorSanitizer) | Signed overflow, null pointer dereference, misaligned access |
+| **TSan** (ThreadSanitizer) | Data races, deadlocks |
+
+A separate macOS job uses `xcrun leaks` for leak detection on ARM.
+
+### Running Sanitizers Locally
+
+Build with sanitizer flags enabled:
+
+```bash
+cd m_tree/build
+
+# AddressSanitizer (recommended first check)
+cmake ../ -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -g" \
+  -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address"
+cmake --build . --config Debug
+
+# Run with enhanced options
+ASAN_OPTIONS=detect_stack_use_after_return=1:check_initialization_order=1 \
+  ./binaries/m_tree_tests
+
+# UndefinedBehaviorSanitizer
+cmake ../ -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_CXX_FLAGS="-fsanitize=undefined -fno-sanitize-recover=all -g" \
+  -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=undefined"
+cmake --build . --config Debug
+UBSAN_OPTIONS=print_stacktrace=1 ./binaries/m_tree_tests
+```
+
+### macOS Leak Detection
+
+On macOS, use the system `leaks` tool:
+
+```bash
+cd m_tree
+xcrun leaks --atExit -- ./binaries/m_tree_tests
+```
+
+Look for "0 leaks for 0 total leaked bytes" in the output.
+
 ## Architecture
 
 The library follows a pipeline pattern: TreeFunctions -> Tree -> Mesher -> Mesh
