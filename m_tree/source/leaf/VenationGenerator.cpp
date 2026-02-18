@@ -152,7 +152,7 @@ void VenationGenerator::compute_pipe_widths(std::vector<VeinNode>& nodes)
 	// Propagate from tips to root (nodes are ordered parent-before-child)
 	for (int i = static_cast<int>(nodes.size()) - 1; i >= 0; --i)
 	{
-		if (nodes[i].parent >= 0)
+		if (nodes[i].parent >= 0 && nodes[i].parent < static_cast<int>(nodes.size()))
 		{
 			nodes[nodes[i].parent].width += nodes[i].width;
 		}

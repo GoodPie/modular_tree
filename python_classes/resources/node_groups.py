@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
 import math
 
 import bpy
 from bpy.types import NodeTree, Object
+
+logger = logging.getLogger(__name__)
 
 # =============================================================================
 # Version constant - increment when changing node group implementation
@@ -45,6 +48,7 @@ DEFAULT_SEED = 0
 DEFAULT_LEAF_NAME = "MTree_Default_Leaf"
 RESOURCE_COLLECTION_NAME = "MTree_Resources"
 LEAVES_MODIFIER_NAME = "leaves"
+BILLBOARD_MODE_MAP = {"OFF": 0, "AXIAL": 1, "CAMERA": 2}
 
 
 def _get_or_create_resource_collection():
@@ -134,6 +138,10 @@ def create_default_leaf_object() -> Object:
     try:
         return _create_procedural_leaf()
     except Exception:
+        logger.warning(
+            "Procedural leaf generation failed, falling back to quad",
+            exc_info=True,
+        )
         return _create_quad_leaf()
 
 
@@ -857,10 +865,9 @@ def distribute_leaves(
             modifier[socket_id] = cull_distance
 
     if billboard_mode != "OFF":
-        _billboard_mode_map = {"OFF": 0, "AXIAL": 1, "CAMERA": 2}
         socket_id = _find_socket_identifier(node_group, "Billboard Mode")
         if socket_id is not None:
-            modifier[socket_id] = _billboard_mode_map[billboard_mode]
+            modifier[socket_id] = BILLBOARD_MODE_MAP[billboard_mode]
 
     if camera is not None:
         socket_id = _find_socket_identifier(node_group, "Camera")

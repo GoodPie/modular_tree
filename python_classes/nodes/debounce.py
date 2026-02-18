@@ -1,6 +1,10 @@
 """Debounced tree rebuild to avoid redundant builds while adjusting values."""
 
+import logging
+
 import bpy
+
+logger = logging.getLogger(__name__)
 
 _pending_timer = None
 _pending_mesher_id = None
@@ -18,8 +22,8 @@ def schedule_build(mesher, delay=DEBOUNCE_DELAY):
         try:
             bpy.app.timers.unregister(_pending_timer)
         except ValueError:
-            msg = f"Failed to unregister pending timer for mesher {mesher.name}"
-            print(msg)
+            # Timer already fired or was removed — safe to proceed
+            logger.debug("Timer already expired for mesher %s", mesher.name)
         _pending_timer = None
 
     def _do_build():
