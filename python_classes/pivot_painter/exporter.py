@@ -42,6 +42,11 @@ class PivotPainterExporter:
         "direction",  # X-Vector for Pivot Painter 2.0
     ]
 
+    LEAF_ATTRIBUTES = [
+        "leaf_attachment_point",
+        "leaf_facing_direction",
+    ]
+
     def __init__(
         self,
         mesh: bpy.types.Mesh,
@@ -53,6 +58,11 @@ class PivotPainterExporter:
         self.export_format = export_format
         self.texture_size = texture_size
         self.export_path = export_path
+
+    @property
+    def has_leaf_data(self) -> bool:
+        """Check if the mesh has leaf-specific attributes."""
+        return all(attr in self.mesh.attributes for attr in self.LEAF_ATTRIBUTES)
 
     def validate(self) -> ExportResult | None:
         """Validate that the mesh has required attributes.
@@ -103,5 +113,6 @@ class PivotPainterExporter:
             texture_size=self.texture_size,
             export_path=self.export_path,
             is_ue5=(self.export_format == ExportFormat.UE5),
+            include_leaf_data=self.has_leaf_data,
         )
         return exporter.export()
