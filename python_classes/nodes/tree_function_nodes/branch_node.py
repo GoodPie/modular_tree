@@ -199,7 +199,7 @@ class BranchNode(bpy.types.Node, MtreeFunctionNode):
             "Density",
             min_value=0.0001,
             property_name="branches_density",
-            property_value=2,
+            property_value=1,
             description=PARAM_DESCRIPTIONS["branches_density"],
         )
         self.add_input(

@@ -1,7 +1,6 @@
 import bpy
 
 from ..base_types.socket import MtreeSocket
-from ..debounce import schedule_build
 
 
 class MtreeFloatSocket(bpy.types.NodeSocket, MtreeSocket):
@@ -15,13 +14,6 @@ class MtreeFloatSocket(bpy.types.NodeSocket, MtreeSocket):
 
     def update_value(self, context):
         self["property_value"] = max(self.min_value, min(self.max_value, self.property_value))
-        mesher = self.node.get_mesher()
-        if mesher is not None:
-            schedule_build(mesher)
-        else:
-            auto_method = getattr(self.node, "auto_build_method", None)
-            if auto_method:
-                schedule_build(self.node, method=auto_method)
 
     property_value: bpy.props.FloatProperty(default=0, update=update_value)
 
