@@ -25,6 +25,8 @@ class TestTreePreset:
         assert preset.description == "A test preset"
         assert preset.branches == {}
         assert preset.trunk == {}
+        assert preset.sub_branches == {}
+        assert preset.leaf_params == {}
 
     def test_create_preset_with_branches(self):
         """TreePreset can be created with branch parameters."""
@@ -138,7 +140,7 @@ class TestGenerateRandomParams:
         """All parameter values are numeric."""
         params = _generate_random_params()
         for key, value in params.items():
-            assert isinstance(value, (int, float)), f"{key} value {value!r} is not numeric"
+            assert isinstance(value, int | float), f"{key} value {value!r} is not numeric"
 
     def test_values_within_reasonable_ranges(self):
         """Parameter values fall within expected ranges."""
@@ -167,3 +169,38 @@ class TestPropertyWrapperParams:
     def test_is_set(self):
         """PROPERTY_WRAPPER_PARAMS is a set for O(1) lookups."""
         assert isinstance(PROPERTY_WRAPPER_PARAMS, set)
+
+
+class TestPinePreset:
+    """Tests for PINE preset crown shape and tuned parameters."""
+
+    def test_pine_preset_has_crown_shape(self):
+        """PINE preset includes crown shape for conical silhouette."""
+        pine = TREE_PRESETS["PINE"]
+        assert "crown_shape" in pine.branches
+        assert pine.branches["crown_shape"] == "Conical"
+
+    def test_pine_preset_has_dense_sub_branches(self):
+        """PINE preset has dense sub-branches for needle coverage."""
+        pine = TREE_PRESETS["PINE"]
+        assert pine.sub_branches["branches_density"] == 4.0
+
+
+class TestWillowPreset:
+    """Tests for WILLOW preset sub-branches and leaf params."""
+
+    def test_willow_preset_has_sub_branches(self):
+        """WILLOW preset defines sub_branches for cascading whips."""
+        willow = TREE_PRESETS["WILLOW"]
+        assert willow.sub_branches != {}
+        assert "gravity_strength" in willow.sub_branches
+        assert "length" in willow.sub_branches
+        assert "stiffness" in willow.sub_branches
+
+    def test_willow_preset_has_leaf_params(self):
+        """WILLOW preset defines leaf distribution overrides."""
+        willow = TREE_PRESETS["WILLOW"]
+        assert willow.leaf_params != {}
+        assert "density" in willow.leaf_params
+        assert "scale" in willow.leaf_params
+        assert "max_radius" in willow.leaf_params

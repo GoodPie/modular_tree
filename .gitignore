@@ -42,3 +42,4 @@ m_tree.egg-info/
 tmp/*
 *.whl
 .venv/
+.DS_Store

@@ -10,6 +10,7 @@ import bpy
 from ...m_tree_wrapper import lazy_m_tree as m_tree
 from ...mesh_utils import create_mesh_from_cpp
 from ..base_types.node import MtreeNode
+from ..debounce import schedule_build
 
 # Debounce state for auto-update
 _pending_timers = {}
@@ -36,10 +37,7 @@ def debounced_build(mesher, delay=_DEBOUNCE_DELAY):
 
 
 def on_update_prop(node, context):
-    if getattr(node, "auto_update", True):
-        debounced_build(node)
-    else:
-        node.build_tree()
+    schedule_build(node)
 
 
 class TreeMesherNode(bpy.types.Node, MtreeNode):
@@ -132,6 +130,8 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
             if not output_links:
                 raise ValueError("No connected trunk node")
             trunk_function = output_links[0].to_node.construct_function()
+            if trunk_function is None:
+                raise ValueError("Connected node returned no tree function")
             tree.set_trunk_function(trunk_function)
             tree.execute_functions()
 

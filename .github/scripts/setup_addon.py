@@ -72,12 +72,13 @@ def setup_addon_directory():
 
     all_files = os.listdir(".")
 
-    # Copy addon files
+    # Copy addon files (excluding backup files like .blend1)
+    ignore_patterns = shutil.ignore_patterns("*.blend1", "__pycache__")
     for f in all_files:
         if f.endswith(".py") or f == "blender_manifest.toml":
             shutil.copy2(os.path.join(".", f), root)
         elif f in (ADDON_SOURCE_DIRNAME, RESOURCES_DIRNAME):
-            shutil.copytree(os.path.join(".", f), os.path.join(root, f))
+            shutil.copytree(os.path.join(".", f), os.path.join(root, f), ignore=ignore_patterns)
 
     # Copy wheels from downloaded artifacts
     wheel_files = []
@@ -97,9 +98,15 @@ def setup_addon_directory():
 
 
 def create_zip(input_dir, output_dir):
+    """Create a zip archive (for manual builds without Blender CLI)."""
     basename = os.path.join(output_dir, Path(input_dir).stem)
     filepath = shutil.make_archive(basename, "zip", input_dir)
     return filepath
+
+
+def get_addon_root(addon_dirpath):
+    """Return the inner addon root directory path."""
+    return os.path.join(addon_dirpath, "modular_tree")
 
 
 def list_files(root_directory):
@@ -122,5 +129,21 @@ def list_files(root_directory):
 
 
 if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Package the Modular Tree addon")
+    parser.add_argument(
+        "--no-zip",
+        action="store_true",
+        help="Prepare directory only, skip zip creation (for use with Blender CLI)",
+    )
+    args = parser.parse_args()
+
     addon_dirpath = setup_addon_directory()
-    archive_filepath = create_zip(addon_dirpath, TMP_DIRPATH)
+
+    if args.no_zip:
+        # Print the addon root path for Blender CLI to use
+        print(f"Addon prepared at: {get_addon_root(addon_dirpath)}")
+    else:
+        archive_filepath = create_zip(addon_dirpath, TMP_DIRPATH)
+        print(f"Created archive: {archive_filepath}")

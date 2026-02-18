@@ -33,6 +33,13 @@ node_categories = [
         ],
     ),
     MTreeNodeCategory(
+        "Leaf",
+        "Leaf",
+        items=[
+            NodeItem("mt_LeafShapeNode"),
+        ],
+    ),
+    MTreeNodeCategory(
         "Modifiers",
         "Modifiers",
         items=[

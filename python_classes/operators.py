@@ -11,7 +11,16 @@ from bpy.utils import register_class, unregister_class
 from .m_tree_wrapper import lazy_m_tree as m_tree
 from .mesh_utils import create_mesh_from_cpp
 from .pivot_painter import ExportFormat, PivotPainterExporter
-from .presets import apply_preset, apply_trunk_preset, get_growth_preset_items, get_preset_items
+from .presets import (
+    TREE_PRESETS,
+    apply_preset,
+    apply_preset_to_generator,
+    apply_sub_branch_preset,
+    apply_trunk_preset,
+    get_growth_preset_items,
+    get_preset_items,
+)
+from .presets.leaf_presets import LEAF_PRESETS, get_leaf_preset_items
 from .resources.node_groups import distribute_leaves
 
 
@@ -40,11 +49,60 @@ class AddLeavesModifier(bpy.types.Operator):
     bl_options = {"REGISTER", "UNDO"}
 
     object_id: bpy.props.StringProperty()
+    distribution_mode: bpy.props.IntProperty(
+        name="Distribution Mode",
+        description="0=Random, 1=Phyllotactic",
+        default=0,
+        min=0,
+        max=1,
+    )
+    phyllotaxis_angle: bpy.props.FloatProperty(
+        name="Phyllotaxis Angle",
+        description="Divergence angle in degrees (137.5 = golden angle)",
+        default=137.5,
+        min=0.0,
+        max=360.0,
+    )
+    billboard_mode: bpy.props.EnumProperty(
+        name="Billboard Mode",
+        items=[
+            ("OFF", "Off", "No billboard rotation"),
+            ("AXIAL", "Axial", "Rotate around branch axis toward camera"),
+            ("CAMERA", "Camera-Facing", "Fully face the camera"),
+        ],
+        default="OFF",
+    )
+    lod_1_distance: bpy.props.FloatProperty(
+        name="LOD 1 Distance",
+        description="Distance threshold for LOD 1 switching",
+        default=20.0,
+        min=0.0,
+    )
+    cull_distance: bpy.props.FloatProperty(
+        name="Cull Distance",
+        description="Distance beyond which leaves are removed",
+        default=100.0,
+        min=0.0,
+    )
+    enable_normal_transfer: bpy.props.BoolProperty(
+        name="Enable Normal Transfer",
+        description="Transfer proxy volume normals to leaves for smooth canopy shading",
+        default=True,
+    )
 
     def execute(self, context):
         ob = bpy.data.objects.get(self.object_id)
         if ob is not None:
-            distribute_leaves(ob)
+            distribute_leaves(
+                ob,
+                distribution_mode=self.distribution_mode,
+                phyllotaxis_angle=self.phyllotaxis_angle,
+                billboard_mode=self.billboard_mode,
+                lod_1_distance=self.lod_1_distance,
+                cull_distance=self.cull_distance,
+                camera=bpy.context.scene.camera,
+                enable_normal_transfer=self.enable_normal_transfer,
+            )
         return {"FINISHED"}
 
 
@@ -63,6 +121,13 @@ class QuickGenerateTree(bpy.types.Operator):
         name="Add Leaves", default=True, description="Automatically add leaf distribution"
     )
 
+    # Maps tree presets to matching leaf presets
+    _TREE_TO_LEAF_PRESET = {
+        "OAK": "OAK",
+        "PINE": "PINE",
+        "WILLOW": "WILLOW",
+    }
+
     def execute(self, context):
         try:
             seed = self.seed if self.seed != 0 else randint(0, 10000)
@@ -74,7 +139,12 @@ class QuickGenerateTree(bpy.types.Operator):
             if self.add_leaves:
                 active_obj = context.view_layer.objects.active
                 if active_obj is not None:
-                    distribute_leaves(active_obj)
+                    leaf_obj = self._create_leaf_for_preset(seed)
+                    leaf_kwargs = {}
+                    preset = TREE_PRESETS.get(self.preset)
+                    if preset and preset.leaf_params:
+                        leaf_kwargs = preset.leaf_params
+                    distribute_leaves(active_obj, leaf_object=leaf_obj, **leaf_kwargs)
 
             elapsed = time.time() - start_time
             self.report({"INFO"}, f"Generated tree (seed={seed}) in {elapsed:.2f}s")
@@ -96,6 +166,13 @@ class QuickGenerateTree(bpy.types.Operator):
         branches.seed = seed + 1
         apply_preset(branches, self.preset)
 
+        preset = TREE_PRESETS.get(self.preset)
+        if preset and preset.sub_branches:
+            sub_branches = m_tree.BranchFunction()
+            sub_branches.seed = seed + 2
+            apply_sub_branch_preset(sub_branches, self.preset)
+            branches.add_child(sub_branches)
+
         trunk.add_child(branches)
         tree.set_trunk_function(trunk)
         tree.execute_functions()
@@ -114,6 +191,37 @@ class QuickGenerateTree(bpy.types.Operator):
         obj.select_set(True)
 
         create_mesh_from_cpp(mesh, cpp_mesh)
+
+    def _create_leaf_for_preset(self, seed: int):
+        """Create a unique procedural leaf matching the tree preset."""
+        import random
+
+        from .mesh_utils import create_leaf_mesh_from_cpp
+        from .resources.node_groups import _get_or_create_resource_collection
+
+        # Pick leaf preset based on tree preset
+        if self.preset == "RANDOM":
+            leaf_preset_name = random.choice(list(LEAF_PRESETS.keys()))
+        else:
+            leaf_preset_name = self._TREE_TO_LEAF_PRESET.get(
+                self.preset, random.choice(list(LEAF_PRESETS.keys()))
+            )
+
+        gen = m_tree.LeafShapeGenerator()
+        apply_preset_to_generator(gen, leaf_preset_name)
+        gen.seed = seed
+        gen.asymmetry_seed = seed
+
+        cpp_mesh = gen.generate()
+
+        obj_name = f"Leaf_{seed}"
+        mesh = bpy.data.meshes.new(obj_name)
+        obj = bpy.data.objects.new(obj_name, mesh)
+        create_leaf_mesh_from_cpp(mesh, cpp_mesh)
+
+        collection = _get_or_create_resource_collection()
+        collection.objects.link(obj)
+        return obj
 
     def invoke(self, context, event):
         return context.window_manager.invoke_props_dialog(self)
@@ -190,6 +298,53 @@ class ExportPivotPainter(bpy.types.Operator):
             layout.prop(self, "export_path")
 
 
+class GenerateLeaf(bpy.types.Operator):
+    """Generate a procedural leaf mesh from LeafShapeNode parameters."""
+
+    bl_idname = "mtree.generate_leaf"
+    bl_label = "Generate Leaf"
+    bl_options = {"REGISTER", "UNDO"}
+
+    node_tree_name: bpy.props.StringProperty()
+    node_name: bpy.props.StringProperty()
+
+    def execute(self, context):
+        node_tree = bpy.data.node_groups.get(self.node_tree_name)
+        if not node_tree:
+            self.report({"ERROR"}, "Node tree not found")
+            return {"CANCELLED"}
+        node = node_tree.nodes.get(self.node_name)
+        if node and hasattr(node, "generate_leaf"):
+            node.generate_leaf()
+            return {"FINISHED"}
+        self.report({"ERROR"}, "Leaf shape node not found")
+        return {"CANCELLED"}
+
+
+class ApplyLeafPreset(bpy.types.Operator):
+    """Apply a species preset to a LeafShapeNode."""
+
+    bl_idname = "mtree.apply_leaf_preset"
+    bl_label = "Apply Leaf Preset"
+    bl_options = {"REGISTER", "UNDO"}
+
+    preset: bpy.props.EnumProperty(
+        name="Preset",
+        items=get_leaf_preset_items(),
+    )
+    node_tree_name: bpy.props.StringProperty()
+    node_name: bpy.props.StringProperty()
+
+    def execute(self, context):
+        node_tree = bpy.data.node_groups.get(self.node_tree_name)
+        if not node_tree:
+            return {"CANCELLED"}
+        node = node_tree.nodes.get(self.node_name)
+        if node and hasattr(node, "apply_preset"):
+            node.apply_preset(self.preset)
+        return {"FINISHED"}
+
+
 class ApplyBranchNodePreset(bpy.types.Operator):
     """Apply a preset to a branch node."""
 
@@ -260,6 +415,8 @@ _classes = [
     AddLeavesModifier,
     QuickGenerateTree,
     ExportPivotPainter,
+    GenerateLeaf,
+    ApplyLeafPreset,
     ApplyBranchNodePreset,
     ApplyTrunkNodePreset,
     ApplyGrowthNodePreset,

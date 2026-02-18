@@ -4,7 +4,11 @@ import numpy as np
 import pytest
 from core import (
     GOLDEN_RATIO_CONJUGATE,
+    compute_leaf_attachment_points,
+    compute_leaf_facing_directions,
     compute_stem_id_hash,
+    create_leaf_attachment_pixels,
+    create_leaf_facing_pixels,
     create_pivot_index_pixels,
     create_xvector_extent_pixels,
     normalize_direction_vector,
@@ -446,3 +450,282 @@ class TestCreateXvectorExtentPixels:
         assert result[0] == pytest.approx(expected, rel=1e-5)
         assert result[1] == pytest.approx(expected, rel=1e-5)
         assert result[2] == pytest.approx(expected, rel=1e-5)
+
+
+class TestComputeLeafAttachmentPoints:
+    """Tests for compute_leaf_attachment_points function."""
+
+    def test_basic_passthrough(self):
+        """Positions are returned as Nx3 float64 array."""
+        positions = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+        result = compute_leaf_attachment_points(positions)
+        assert result.shape == (2, 3)
+        assert result.dtype == np.float64
+        np.testing.assert_array_almost_equal(result, positions)
+
+    def test_empty_input(self):
+        """Empty input returns empty Nx3 array."""
+        result = compute_leaf_attachment_points(np.array([]).reshape(0, 3))
+        assert result.shape == (0, 3)
+
+    def test_flat_array_reshaped(self):
+        """Flat array is reshaped to Nx3."""
+        flat = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0])
+        result = compute_leaf_attachment_points(flat)
+        assert result.shape == (2, 3)
+        np.testing.assert_array_almost_equal(result[0], [1.0, 2.0, 3.0])
+
+    def test_integer_input_converted_to_float(self):
+        """Integer input is converted to float64."""
+        positions = np.array([[1, 2, 3]], dtype=np.int32)
+        result = compute_leaf_attachment_points(positions)
+        assert result.dtype == np.float64
+
+    def test_single_point(self):
+        """Single point works correctly."""
+        result = compute_leaf_attachment_points(np.array([[7.0, 8.0, 9.0]]))
+        assert result.shape == (1, 3)
+        np.testing.assert_array_almost_equal(result[0], [7.0, 8.0, 9.0])
+
+
+class TestComputeLeafFacingDirections:
+    """Tests for compute_leaf_facing_directions function."""
+
+    def test_empty_input(self):
+        """Empty rotations return empty Nx3 array."""
+        result = compute_leaf_facing_directions(np.array([]).reshape(0, 3))
+        assert result.shape == (0, 3)
+
+    def test_zero_rotation_gives_z_up(self):
+        """Zero Euler rotation should give [0, 0, 1] (Z-up)."""
+        rotations = np.array([[0.0, 0.0, 0.0]])
+        result = compute_leaf_facing_directions(rotations)
+        np.testing.assert_array_almost_equal(result[0], [0.0, 0.0, 1.0])
+
+    def test_90_deg_x_rotation(self):
+        """90-degree X rotation should rotate Z-up to Y-forward."""
+        rotations = np.array([[np.pi / 2, 0.0, 0.0]])
+        result = compute_leaf_facing_directions(rotations)
+        # Rz(0)*Ry(0)*Rx(90): Z-up -> [0, -1, 0] (depending on convention)
+        # R22 = cy*cx = cos(0)*cos(pi/2) = 0, R21 = cy*sx = cos(0)*sin(pi/2) = 1
+        np.testing.assert_array_almost_equal(result[0], [0.0, -1.0, 0.0], decimal=5)
+
+    def test_90_deg_y_rotation(self):
+        """90-degree Y rotation should rotate Z-up to X-forward."""
+        rotations = np.array([[0.0, np.pi / 2, 0.0]])
+        result = compute_leaf_facing_directions(rotations)
+        # R02 = cz*sy*cx + sz*sx = 1*1*1 + 0 = 1, R12 = 0, R22 = cy*cx = 0
+        np.testing.assert_array_almost_equal(result[0], [1.0, 0.0, 0.0], decimal=5)
+
+    def test_output_is_normalized(self):
+        """Output directions should all be unit length."""
+        rotations = np.array(
+            [
+                [0.3, 0.5, 0.7],
+                [1.0, 2.0, 3.0],
+                [0.0, 0.0, 0.0],
+            ]
+        )
+        result = compute_leaf_facing_directions(rotations)
+        lengths = np.linalg.norm(result, axis=1)
+        np.testing.assert_array_almost_equal(lengths, [1.0, 1.0, 1.0])
+
+    def test_custom_local_up(self):
+        """Custom local_up axis is used instead of Z."""
+        rotations = np.array([[0.0, 0.0, 0.0]])
+        result = compute_leaf_facing_directions(rotations, local_up=np.array([0.0, 1.0, 0.0]))
+        np.testing.assert_array_almost_equal(result[0], [0.0, 1.0, 0.0])
+
+    def test_multiple_instances(self):
+        """Multiple instances produce correct shape."""
+        rotations = np.zeros((10, 3))
+        result = compute_leaf_facing_directions(rotations)
+        assert result.shape == (10, 3)
+
+
+class TestCreateLeafAttachmentPixels:
+    """Tests for create_leaf_attachment_pixels function."""
+
+    def test_basic_pixel_generation(self):
+        """Single leaf writes position to correct pixel."""
+        leaf_ids = np.array([0.0])
+        positions = np.array([[1.0, 2.0, 3.0]])
+        result = create_leaf_attachment_pixels(leaf_ids, positions, texture_size=4)
+
+        assert result[0] == pytest.approx(1.0)  # R = X
+        assert result[1] == pytest.approx(2.0)  # G = Y
+        assert result[2] == pytest.approx(3.0)  # B = Z
+        assert result[3] == pytest.approx(1.0)  # A = 1.0
+
+    def test_alpha_always_one(self):
+        """Alpha channel is always 1.0 for written pixels."""
+        leaf_ids = np.array([0.0, 1.0, 2.0])
+        positions = np.array([[0.0, 0.0, 0.0]] * 3)
+        result = create_leaf_attachment_pixels(leaf_ids, positions, texture_size=4)
+
+        for i in range(3):
+            assert result[i * 4 + 3] == pytest.approx(1.0)
+
+    def test_empty_input(self):
+        """Empty input produces zeroed texture."""
+        leaf_ids = np.array([])
+        positions = np.zeros((0, 3))
+        result = create_leaf_attachment_pixels(leaf_ids, positions, texture_size=4)
+        assert len(result) == 4 * 4 * 4
+        assert np.all(result == 0.0)
+
+    def test_output_size(self):
+        """Output array has correct size."""
+        leaf_ids = np.array([0.0])
+        positions = np.array([[0.0, 0.0, 0.0]])
+        result = create_leaf_attachment_pixels(leaf_ids, positions, texture_size=8)
+        assert len(result) == 8 * 8 * 4
+
+    def test_integer_id_mapping(self):
+        """Float leaf IDs are cast to int for pixel mapping."""
+        leaf_ids = np.array([0.0, 3.0, 7.0])
+        positions = np.array([[1.0, 0.0, 0.0], [2.0, 0.0, 0.0], [3.0, 0.0, 0.0]])
+        result = create_leaf_attachment_pixels(leaf_ids, positions, texture_size=8)
+
+        assert result[0 * 4] == pytest.approx(1.0)  # ID 0 -> pixel 0
+        assert result[3 * 4] == pytest.approx(2.0)  # ID 3 -> pixel 3
+        assert result[7 * 4] == pytest.approx(3.0)  # ID 7 -> pixel 7
+
+    def test_non_integer_float_id_is_silently_dropped(self):
+        """Non-integer float IDs (e.g. 2.9) are dropped due to int-cast mismatch in mask.
+
+        np.unique(astype(int)) maps 2.9 -> 2, but the mask `leaf_ids == 2` is False
+        since 2.9 != 2. In practice IDs are always integer-valued floats so this
+        edge case doesn't arise, but the behavior is documented here.
+        """
+        leaf_ids = np.array([2.9])
+        positions = np.array([[5.0, 6.0, 7.0]])
+        result = create_leaf_attachment_pixels(leaf_ids, positions, texture_size=4)
+
+        # Pixel 2 is NOT written because mask fails (2.9 != 2)
+        assert result[8] == pytest.approx(0.0)
+        assert result[9] == pytest.approx(0.0)
+        assert result[10] == pytest.approx(0.0)
+
+    def test_duplicate_leaf_ids_use_first(self):
+        """Duplicate IDs use first vertex data."""
+        leaf_ids = np.array([0.0, 0.0])
+        positions = np.array([[1.0, 0.0, 0.0], [9.0, 0.0, 0.0]])
+        result = create_leaf_attachment_pixels(leaf_ids, positions, texture_size=4)
+        assert result[0] == pytest.approx(1.0)
+
+    def test_id_in_second_row(self):
+        """Leaf ID that maps to second texture row."""
+        leaf_ids = np.array([4.0])  # 4x4 texture: row 1, col 0
+        positions = np.array([[5.0, 6.0, 7.0]])
+        result = create_leaf_attachment_pixels(leaf_ids, positions, texture_size=4)
+
+        pixel_idx = (1 * 4 + 0) * 4  # row 1, col 0
+        assert result[pixel_idx] == pytest.approx(5.0)
+
+    def test_overflow_id_ignored(self):
+        """IDs beyond texture bounds are silently ignored."""
+        leaf_ids = np.array([16.0])  # Overflows 4x4 texture
+        positions = np.array([[1.0, 2.0, 3.0]])
+        result = create_leaf_attachment_pixels(leaf_ids, positions, texture_size=4)
+        assert np.all(result == 0.0)
+
+    def test_float_vs_int_mask_regression(self):
+        """Float stem_ids must match after astype(int) in unique but compare as float in mask.
+
+        This verifies that the mask `leaf_ids == leaf_id` works correctly when
+        leaf_ids are floats and leaf_id comes from np.unique(leaf_ids.astype(int)).
+        """
+        # IDs that are floats with .0 should still match the int-cast unique values
+        leaf_ids = np.array([5.0, 5.0, 10.0])
+        positions = np.array([[1.0, 0.0, 0.0], [2.0, 0.0, 0.0], [3.0, 0.0, 0.0]])
+        result = create_leaf_attachment_pixels(leaf_ids, positions, texture_size=16)
+
+        # Stem 5 should be written (pixel 5)
+        assert result[5 * 4] == pytest.approx(1.0)
+        # Stem 10 should be written (pixel 10)
+        assert result[10 * 4] == pytest.approx(3.0)
+
+
+class TestCreateLeafFacingPixels:
+    """Tests for create_leaf_facing_pixels function."""
+
+    def test_basic_pixel_generation(self):
+        """Single leaf writes normalized direction to correct pixel."""
+        leaf_ids = np.array([0.0])
+        directions = np.array([[0.0, 0.0, 1.0]])
+        result = create_leaf_facing_pixels(leaf_ids, directions, texture_size=4)
+
+        assert result[0] == pytest.approx(0.0)  # R = X
+        assert result[1] == pytest.approx(0.0)  # G = Y
+        assert result[2] == pytest.approx(1.0)  # B = Z
+        assert result[3] == pytest.approx(1.0)  # A = 1.0
+
+    def test_normalizes_direction(self):
+        """Direction is normalized before writing to pixel."""
+        leaf_ids = np.array([0.0])
+        directions = np.array([[3.0, 0.0, 4.0]])  # length = 5
+        result = create_leaf_facing_pixels(leaf_ids, directions, texture_size=4)
+
+        assert result[0] == pytest.approx(0.6)
+        assert result[2] == pytest.approx(0.8)
+
+    def test_zero_direction_uses_fallback(self):
+        """Zero direction uses [0, 0, 1] fallback."""
+        leaf_ids = np.array([0.0])
+        directions = np.array([[0.0, 0.0, 0.0]])
+        result = create_leaf_facing_pixels(leaf_ids, directions, texture_size=4)
+
+        assert result[0] == pytest.approx(0.0)
+        assert result[1] == pytest.approx(0.0)
+        assert result[2] == pytest.approx(1.0)
+
+    def test_empty_input(self):
+        """Empty input produces zeroed texture."""
+        leaf_ids = np.array([])
+        directions = np.zeros((0, 3))
+        result = create_leaf_facing_pixels(leaf_ids, directions, texture_size=4)
+        assert len(result) == 4 * 4 * 4
+        assert np.all(result == 0.0)
+
+    def test_output_size(self):
+        """Output array has correct size."""
+        leaf_ids = np.array([0.0])
+        directions = np.array([[1.0, 0.0, 0.0]])
+        result = create_leaf_facing_pixels(leaf_ids, directions, texture_size=8)
+        assert len(result) == 8 * 8 * 4
+
+    def test_multiple_leaves(self):
+        """Multiple leaves write to different pixels."""
+        leaf_ids = np.array([0.0, 1.0])
+        directions = np.array([[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]])
+        result = create_leaf_facing_pixels(leaf_ids, directions, texture_size=4)
+
+        assert result[0] == pytest.approx(1.0)  # Leaf 0, X
+        assert result[5] == pytest.approx(1.0)  # Leaf 1, Y
+
+    def test_negative_direction_preserved(self):
+        """Negative direction components are preserved."""
+        leaf_ids = np.array([0.0])
+        directions = np.array([[-1.0, 0.0, 0.0]])
+        result = create_leaf_facing_pixels(leaf_ids, directions, texture_size=4)
+        assert result[0] == pytest.approx(-1.0)
+
+    def test_float_vs_int_mask_regression(self):
+        """Pixel writers handle float-to-int ID conversion correctly in masking."""
+        leaf_ids = np.array([3.0, 3.0, 7.0, 7.0])
+        directions = np.array(
+            [
+                [1.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0],  # duplicate, should be ignored
+                [0.0, 0.0, 1.0],
+                [0.0, 0.0, -1.0],  # duplicate, should be ignored
+            ]
+        )
+        result = create_leaf_facing_pixels(leaf_ids, directions, texture_size=8)
+
+        # Leaf 3 -> pixel 3, uses first vertex direction [1, 0, 0]
+        assert result[3 * 4] == pytest.approx(1.0)
+        assert result[3 * 4 + 1] == pytest.approx(0.0)
+        # Leaf 7 -> pixel 7, uses first vertex direction [0, 0, 1]
+        assert result[7 * 4 + 2] == pytest.approx(1.0)

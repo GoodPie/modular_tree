@@ -23,10 +23,17 @@ A procedural tree generator addon for Blender using a node-based workflow.
 
 ## Requirements
 
-- Blender 5.0 or later
-  - This is simply because I haven't tested it on earlier versions
+- Blender 4.3 or later
 
 ## Installation
+
+### Blender Extensions
+
+Find the extension on the Blender extension platform
+
+https://extensions.blender.org/add-ons/modular-tree/
+
+### Local Installation
 
 1. Download the latest release for your OS from [Releases](https://github.com/GoodPie/modular_tree/releases)
 2. In Blender: Edit -> Preferences -> Add-ons -> Install
@@ -92,6 +99,17 @@ Enable **Preview in Viewport** to visualize the envelope. See [Crown Shape Guide
 - **Apical Dominance** - How much the main stem suppresses side branches
 - **Grow/Split/Cut Thresholds** - Control branching behavior
 - **Gravitropism** - Response to gravity direction
+
+### Leaf Generation
+
+Mtree generates fully procedural 3D leaves from math — no hand-modeling or textures needed. Each leaf is built through a pipeline:
+
+1. **Shape** — The outline is created using the [Superformula](https://en.wikipedia.org/wiki/Superformula), a single equation that can produce round, pointed, heart-shaped, or star-like forms by adjusting a few parameters.
+2. **Edge detail** — Teeth, scallops, or lobes are added to the outline to match real leaf margin types (serrate, dentate, crenate, lobed).
+3. **Vein network** — Veins grow using [space colonization](https://algorithmicbotany.org/papers/venation.sig2005.pdf), which scatters "growth hormone" points across the leaf and lets veins grow toward them — producing realistic branching patterns that fill the available space.
+4. **Surface curvature** — The flat mesh is bent with midrib curvature, cross-cupping, edge curl, and raised ridges along vein paths.
+
+Species presets (Oak, Maple, Birch, Willow, Pine) combine these parameters to match real leaves. See the [Leaf Generation Guide](docs/leaf_generation.md) for a full walkthrough.
 
 ### Leaf Distribution
 After generating a tree, click "Add Leaves" in Tree Mesher to configure:

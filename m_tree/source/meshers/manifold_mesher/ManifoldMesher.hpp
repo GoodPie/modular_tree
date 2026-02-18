@@ -3,6 +3,10 @@
 #include <string>
 #include <tuple>
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
 namespace Mtree
 {
 
@@ -15,10 +19,12 @@ class ManifoldMesher : public TreeMesher
 		inline static const std::string radius = "radius";
 		inline static const std::string direction = "direction";
 		// Pivot Painter 2.0 attributes
-		inline static const std::string stem_id = "stem_id";
-		inline static const std::string hierarchy_depth = "hierarchy_depth";
-		inline static const std::string pivot_position = "pivot_position";
-		inline static const std::string branch_extent = "branch_extent";
+		inline static std::string stem_id = "stem_id";
+		inline static std::string hierarchy_depth = "hierarchy_depth";
+		inline static std::string pivot_position = "pivot_position";
+		inline static std::string branch_extent = "branch_extent";
+		// Phyllotaxis attribute
+		inline static std::string phyllotaxis_angle = "phyllotaxis_angle";
 	};
 
 	int radial_resolution = 8;
