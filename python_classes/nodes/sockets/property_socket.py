@@ -2,7 +2,6 @@ import bpy
 
 from ...m_tree_wrapper import lazy_m_tree
 from ..base_types.socket import MtreeSocket
-from ..debounce import schedule_build
 
 
 class MtreePropertySocket(bpy.types.NodeSocket, MtreeSocket):
@@ -16,9 +15,6 @@ class MtreePropertySocket(bpy.types.NodeSocket, MtreeSocket):
 
     def update_value(self, context):
         self["property_value"] = max(self.min_value, min(self.max_value, self.property_value))
-        mesher = self.node.get_mesher()
-        if mesher is not None:
-            schedule_build(mesher)
 
     property_value: bpy.props.FloatProperty(default=0, update=update_value)
 

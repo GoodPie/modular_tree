@@ -1,7 +1,6 @@
 import bpy
 
 from ..base_types.socket import MtreeSocket
-from ..debounce import schedule_build
 
 
 class MtreeBoolSocket(bpy.types.NodeSocket, MtreeSocket):
@@ -10,12 +9,7 @@ class MtreeBoolSocket(bpy.types.NodeSocket, MtreeSocket):
 
     color = (0.8, 0.8, 0.2, 0.5)
 
-    def update_value(self, context):
-        mesher = self.node.get_mesher()
-        if mesher is not None:
-            schedule_build(mesher)
-
-    property_value: bpy.props.BoolProperty(default=True, update=update_value)
+    property_value: bpy.props.BoolProperty(default=True)
 
     def draw(self, context, layout, node, text):
         if self.is_output or self.is_linked:
