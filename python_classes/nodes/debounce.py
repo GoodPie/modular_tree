@@ -16,6 +16,9 @@ def schedule_build(mesher, delay=DEBOUNCE_DELAY):
     """Schedule a debounced build_tree call. Resets on each invocation."""
     global _pending_timer, _pending_mesher_id
 
+    if not getattr(mesher, "auto_update", True):
+        return
+
     _pending_mesher_id = (mesher.id_data.name, mesher.name)
 
     if _pending_timer is not None:

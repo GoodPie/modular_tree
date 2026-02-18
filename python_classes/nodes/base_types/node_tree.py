@@ -9,10 +9,9 @@ class MtreeNodeTree(bpy.types.NodeTree):
     def update(self):
         """Called when links or topology change."""
         # Import here to avoid circular imports
-        from ..tree_function_nodes.tree_mesher_node import debounced_build
+        from ..debounce import schedule_build
 
         for node in self.nodes:
             if node.bl_idname == "mt_MesherNode":
-                if getattr(node, "auto_update", True):
-                    debounced_build(node)
+                schedule_build(node)
                 break

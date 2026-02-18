@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import time
 
 import bpy
@@ -11,29 +10,6 @@ from ...m_tree_wrapper import lazy_m_tree as m_tree
 from ...mesh_utils import create_mesh_from_cpp
 from ..base_types.node import MtreeNode
 from ..debounce import schedule_build
-
-# Debounce state for auto-update
-_pending_timers = {}
-_DEBOUNCE_DELAY = 0.3  # seconds
-
-
-def debounced_build(mesher, delay=_DEBOUNCE_DELAY):
-    """Schedule a debounced tree rebuild."""
-    mesher_id = id(mesher)
-
-    # Cancel existing timer for this mesher
-    if mesher_id in _pending_timers:
-        with contextlib.suppress(ValueError):
-            bpy.app.timers.unregister(_pending_timers[mesher_id])
-
-    def do_build():
-        if mesher_id in _pending_timers:
-            del _pending_timers[mesher_id]
-        mesher.build_tree()
-        return None  # Don't repeat
-
-    _pending_timers[mesher_id] = do_build
-    bpy.app.timers.register(do_build, first_interval=delay)
 
 
 def on_update_prop(node, context):

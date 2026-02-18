@@ -1,6 +1,7 @@
 import bpy
 
 from ..base_types.socket import MtreeSocket
+from ..debounce import schedule_build
 
 
 class TreeSocket(bpy.types.NodeSocket, MtreeSocket):
@@ -10,9 +11,9 @@ class TreeSocket(bpy.types.NodeSocket, MtreeSocket):
     color = (0.2, 0.7, 0.2, 1)
 
     def update_value(self, context):
-        mesher = self.node.get_mesher_rec()
+        mesher = self.node.get_mesher()
         if mesher is not None:
-            mesher.build_tree()
+            schedule_build(mesher)
 
     def draw(self, context, layout, node, text):
         layout.label(text=text)
