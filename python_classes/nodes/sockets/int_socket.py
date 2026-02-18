@@ -18,6 +18,10 @@ class MtreeIntSocket(bpy.types.NodeSocket, MtreeSocket):
         mesher = self.node.get_mesher()
         if mesher is not None:
             schedule_build(mesher)
+        else:
+            auto_method = getattr(self.node, "auto_build_method", None)
+            if auto_method:
+                schedule_build(self.node, method=auto_method)
 
     property_value: bpy.props.IntProperty(default=0, update=update_value)
 

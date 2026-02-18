@@ -6,42 +6,35 @@ import bpy
 
 logger = logging.getLogger(__name__)
 
-_pending_timer = None
-_pending_mesher_id = None
+_pending_timers = {}  # {(tree_name, node_name): timer_func}
 
 DEBOUNCE_DELAY = 0.3  # seconds of inactivity before rebuild
 
 
-def schedule_build(mesher, delay=DEBOUNCE_DELAY):
-    """Schedule a debounced build_tree call. Resets on each invocation."""
-    global _pending_timer, _pending_mesher_id
-
-    if not getattr(mesher, "auto_update", True):
+def schedule_build(node, method="build_tree", delay=DEBOUNCE_DELAY):
+    """Schedule a debounced method call on *node*. Resets on each invocation."""
+    if not getattr(node, "auto_update", True):
         return
 
-    _pending_mesher_id = (mesher.id_data.name, mesher.name)
+    key = (node.id_data.name, node.name)
 
-    if _pending_timer is not None:
+    # Cancel existing timer for this key
+    existing = _pending_timers.get(key)
+    if existing is not None:
         try:
-            bpy.app.timers.unregister(_pending_timer)
+            bpy.app.timers.unregister(existing)
         except ValueError:
-            # Timer already fired or was removed — safe to proceed
-            logger.debug("Timer already expired for mesher %s", mesher.name)
-        _pending_timer = None
+            logger.debug("Timer already expired for node %s", node.name)
+        del _pending_timers[key]
 
     def _do_build():
-        global _pending_timer, _pending_mesher_id
-        _pending_timer = None
-        if _pending_mesher_id is None:
-            return None
-        tree_name, node_name = _pending_mesher_id
-        _pending_mesher_id = None
-        node_tree = bpy.data.node_groups.get(tree_name)
+        _pending_timers.pop(key, None)
+        node_tree = bpy.data.node_groups.get(key[0])
         if node_tree:
-            node = node_tree.nodes.get(node_name)
-            if node:
-                node.build_tree()
+            resolved = node_tree.nodes.get(key[1])
+            if resolved:
+                getattr(resolved, method)()
         return None
 
-    _pending_timer = _do_build
+    _pending_timers[key] = _do_build
     bpy.app.timers.register(_do_build, first_interval=delay)
