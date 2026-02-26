@@ -68,7 +68,7 @@ jobs:
             cd /d {package}\dependencies\vcpkg &&
             bootstrap-vcpkg.bat &&
             vcpkg install eigen3:x64-windows
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: wheels-${{ matrix.os }}
           path: ./wheelhouse/*.whl
@@ -82,7 +82,7 @@ jobs:
         with:
           python-version: "3.11"
       - uses: astral-sh/setup-uv@v7
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: wheels-ubuntu-latest
           path: wheels
@@ -102,7 +102,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           path: wheels
           merge-multiple: true
@@ -128,7 +128,7 @@ jobs:
           blender --command extension build --split-platforms --output-dir ../../
       - name: Display built extensions
         run: ls -la tmp/*.zip
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: modular_tree_extension
           path: tmp/*.zip
@@ -140,7 +140,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/download-artifact@v7
+      - uses: actions/download-artifact@v8
         with:
           name: modular_tree_extension
           path: release
