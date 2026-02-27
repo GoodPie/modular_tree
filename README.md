@@ -6,7 +6,7 @@
 
 A procedural tree generator addon for Blender using a node-based workflow.
 
-> **Note:** Maintained fork of [Mtree by MaximeHerpin](https://github.com/MaximeHerpin/modular_tree).
+> **Note:** This is a maintained fork of [Mtree by MaximeHerpin](https://github.com/MaximeHerpin/modular_tree). Some features are no longer best practice and work is being done to implement these properly
 
 ## Features
 
