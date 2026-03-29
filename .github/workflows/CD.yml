@@ -187,3 +187,35 @@ jobs:
           tag_name: ${{ steps.vars.outputs.version }}
           body: V${{ steps.vars.outputs.version }}
           prerelease: ${{ !endsWith(github.ref, 'master') }}
+
+  deploy:
+    needs: [package-addon, release]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: modular_tree_extension_*
+          path: extensions
+          merge-multiple: true
+      - name: Get version
+        id: vars
+        run: |
+          RAW_VERSION=$(cat VERSION)
+          echo "version=$(echo $RAW_VERSION | tr '_' '.')" >> $GITHUB_OUTPUT
+      - name: Upload to Blender Extensions
+        env:
+          BLENDER_EXTENSIONS_TOKEN: ${{ secrets.BLENDER_EXTENSIONS_TOKEN }}
+        run: |
+          VERSION="${{ steps.vars.outputs.version }}"
+          for zip in extensions/*.zip; do
+            echo "Uploading $(basename $zip)..."
+            curl -X POST \
+              "https://extensions.blender.org/api/v1/extensions/modular_tree/versions/upload/" \
+              -H "Authorization: bearer $BLENDER_EXTENSIONS_TOKEN" \
+              -F "version_file=@$zip" \
+              -F "release_notes=Release v${VERSION}" \
+              --fail --show-error
+            echo ""
+          done
