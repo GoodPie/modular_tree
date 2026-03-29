@@ -53,7 +53,9 @@ jobs:
         with:
           package-dir: m_tree
         env:
-          CIBW_BUILD: cp311-manylinux_x86_64 cp311-macosx_arm64 cp311-macosx_x86_64 cp311-win_amd64
+          CIBW_BUILD: >-
+            cp311-manylinux_x86_64 cp311-macosx_arm64 cp311-macosx_x86_64 cp311-win_amd64
+            cp313-manylinux_x86_64 cp313-macosx_arm64 cp313-macosx_x86_64 cp313-win_amd64
           CIBW_MANYLINUX_X86_64_IMAGE: manylinux_2_28
           CIBW_BEFORE_BUILD_LINUX: >
             dnf install -y zip unzip tar curl &&
@@ -75,12 +77,15 @@ jobs:
 
   test-python:
     needs: build-wheels
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.13"]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python-version }}
       - uses: astral-sh/setup-uv@v7
       - uses: actions/download-artifact@v7
         with:
@@ -88,14 +93,24 @@ jobs:
           path: wheels
       - name: Install wheel and test dependencies
         run: |
-          uv venv
-          uv pip install wheels/*.whl
+          uv venv --python ${{ matrix.python-version }}
+          PYTHON_TAG="cp$(echo ${{ matrix.python-version }} | tr -d '.')"
+          uv pip install wheels/*${PYTHON_TAG}*.whl
           uv pip install pytest
       - name: Run Python tests
         run: uv run pytest tests/unit -v
 
   package-addon:
     needs: [build-wheels, test-python]
+    strategy:
+      matrix:
+        include:
+          - blender-version: "5.0.0"
+            blender-url-dir: "Blender5.0"
+            python-tag: "cp311"
+          - blender-version: "5.1.0"
+            blender-url-dir: "Blender5.1"
+            python-tag: "cp313"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -104,16 +119,20 @@ jobs:
           python-version: "3.11"
       - uses: actions/download-artifact@v7
         with:
-          path: wheels
+          path: all-wheels
           merge-multiple: true
-      - name: Display downloaded wheels
-        run: ls -R wheels
+      - name: Filter wheels for Python version
+        run: |
+          mkdir -p wheels
+          cp all-wheels/*${{ matrix.python-tag }}*.whl wheels/ || true
+          echo "Filtered wheels for ${{ matrix.python-tag }}:"
+          ls -la wheels/
       - name: Install Blender
         run: |
           set -e
-          BLENDER_VERSION="5.0.0"
+          BLENDER_VERSION="${{ matrix.blender-version }}"
           BLENDER_TAR="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
-          BLENDER_URL="https://download.blender.org/release/Blender5.0/${BLENDER_TAR}"
+          BLENDER_URL="https://download.blender.org/release/${{ matrix.blender-url-dir }}/${BLENDER_TAR}"
           mkdir -p "$HOME/blender"
           curl -L "$BLENDER_URL" -o "$HOME/blender/$BLENDER_TAR"
           tar -xJf "$HOME/blender/$BLENDER_TAR" -C "$HOME/blender"
@@ -126,11 +145,17 @@ jobs:
           ADDON_ROOT="tmp/modular_tree_${VERSION}/modular_tree"
           cd "$ADDON_ROOT"
           blender --command extension build --split-platforms --output-dir ../../
+      - name: Rename extensions to include Python tag
+        run: |
+          cd tmp
+          for f in *.zip; do
+            mv "$f" "${f%.zip}-${{ matrix.python-tag }}.zip"
+          done
       - name: Display built extensions
         run: ls -la tmp/*.zip
       - uses: actions/upload-artifact@v6
         with:
-          name: modular_tree_extension
+          name: modular_tree_extension_${{ matrix.python-tag }}
           path: tmp/*.zip
 
   release:
@@ -142,8 +167,9 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/download-artifact@v7
         with:
-          name: modular_tree_extension
+          pattern: modular_tree_extension_*
           path: release
+          merge-multiple: true
       - name: Display structure of downloaded files
         run: ls -R release
       - name: Get version
@@ -161,3 +187,35 @@ jobs:
           tag_name: ${{ steps.vars.outputs.version }}
           body: V${{ steps.vars.outputs.version }}
           prerelease: ${{ !endsWith(github.ref, 'master') }}
+
+  deploy:
+    needs: [package-addon, release]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: modular_tree_extension_*
+          path: extensions
+          merge-multiple: true
+      - name: Get version
+        id: vars
+        run: |
+          RAW_VERSION=$(cat VERSION)
+          echo "version=$(echo $RAW_VERSION | tr '_' '.')" >> $GITHUB_OUTPUT
+      - name: Upload to Blender Extensions
+        env:
+          BLENDER_EXTENSIONS_TOKEN: ${{ secrets.BLENDER_EXTENSIONS_TOKEN }}
+        run: |
+          VERSION="${{ steps.vars.outputs.version }}"
+          for zip in extensions/*.zip; do
+            echo "Uploading $(basename $zip)..."
+            curl -X POST \
+              "https://extensions.blender.org/api/v1/extensions/modular_tree/versions/upload/" \
+              -H "Authorization: bearer $BLENDER_EXTENSIONS_TOKEN" \
+              -F "version_file=@$zip" \
+              -F "release_notes=Release v${VERSION}" \
+              --fail --show-error
+            echo ""
+          done
