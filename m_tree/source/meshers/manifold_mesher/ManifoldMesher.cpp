@@ -4,6 +4,7 @@
 #include "source/utilities/NodeUtilities.hpp"
 #include <algorithm>
 #include <iostream>
+#include <numbers>
 
 using namespace Mtree;
 using namespace Mtree::NodeUtilities;
@@ -88,7 +89,7 @@ CircleDesignator add_circle(const Vector3& node_position, const Node& node, floa
 
 	for (size_t i = 0; i < radial_n_points; i++)
 	{
-		float angle = (float)i / radial_n_points * 2 * M_PI;
+		float angle = (float)i / radial_n_points * 2 * std::numbers::pi_v<float>;
 		Vector3 point = cos(angle) * right + sin(angle) * up;
 		point = point * radius + circle_position;
 		int index = mesh.add_vertex(point);
@@ -105,7 +106,8 @@ CircleDesignator add_circle(const Vector3& node_position, const Node& node, floa
 		mesh.uvs.emplace_back((float)i / radial_n_points, uv_y);
 	}
 	mesh.uvs.emplace_back(1, uv_y);
-	return CircleDesignator{vertex_index, uv_index, radial_n_points};
+	return CircleDesignator{
+	    .vertex_index = vertex_index, .uv_index = uv_index, .radial_n = radial_n_points};
 }
 
 bool is_index_in_branch_mask(const std::vector<IndexRange>& mask, const int index,
@@ -158,17 +160,22 @@ float get_branch_angle_around_parent(const Node& parent, const Node& branch)
 	Vector3 up = right.cross(parent.direction);
 	float cos_angle = projected_branch_dir.dot(right);
 	float sin_angle = projected_branch_dir.dot(up);
-	return std::fmod(std::atan2(sin_angle, cos_angle) + 2 * M_PI, 2 * M_PI);
+	return std::fmod(std::atan2(sin_angle, cos_angle) + 2 * std::numbers::pi_v<float>,
+	                 2 * std::numbers::pi_v<float>);
 }
 
 IndexRange get_branch_indices_on_circle(const int radial_n_points, const float circle_radius,
                                         const float branch_radius, const float branch_angle)
 {
 	float angle_delta = std::asin(std::clamp(branch_radius / circle_radius, -1.f, 1.f));
-	float increment = 2 * M_PI / radial_n_points;
-	int min_index = (int)(std::fmod(branch_angle - angle_delta + 2 * M_PI, 2 * M_PI) / increment);
+	float increment = 2 * std::numbers::pi_v<float> / radial_n_points;
+	int min_index = (int)(std::fmod(branch_angle - angle_delta + 2 * std::numbers::pi_v<float>,
+	                                2 * std::numbers::pi_v<float>) /
+	                      increment);
 	int max_index =
-	    (int)(std::fmod(branch_angle + angle_delta + increment + 2 * M_PI, 2 * M_PI) / increment);
+	    (int)(std::fmod(branch_angle + angle_delta + increment + 2 * std::numbers::pi_v<float>,
+	                    2 * std::numbers::pi_v<float>) /
+	          increment);
 	return IndexRange{min_index, max_index};
 }
 
@@ -280,14 +287,15 @@ float get_child_twist(const Node& child, const Node& parent)
 	Vector3 up = right.cross(child.direction);
 	float cos_angle = child.tangent.dot(right);
 	float sin_angle = child.tangent.dot(up);
-	return std::fmod(std::atan2(sin_angle, cos_angle) + 2 * M_PI, 2 * M_PI);
+	return std::fmod(std::atan2(sin_angle, cos_angle) + 2 * std::numbers::pi_v<float>,
+	                 2 * std::numbers::pi_v<float>);
 }
 
 int add_child_base_uvs(float parent_uv_y, const Node& parent, const NodeChild& child,
                        const IndexRange child_range, const int child_radial_n,
                        const int parent_radial_n, Mesh& mesh)
 {
-	float uv_growth = parent.length / (parent.radius + .001f) / (2 * M_PI);
+	float uv_growth = parent.length / (parent.radius + .001f) / (2 * std::numbers::pi_v<float>);
 	for (size_t i = 0; i < 2;
 	     i++) // recreating outer uvs (but without continuous (no looping back to x=0)
 	{
@@ -307,7 +315,8 @@ int add_child_base_uvs(float parent_uv_y, const Node& parent, const NodeChild& c
 	float uv_circle_radius = std::min((float)child_radial_n / parent_radial_n, uv_growth / 2) * .6f;
 	for (size_t i = 0; i < child_radial_n; i++) // inner uvs
 	{
-		float angle = (float)i / (child_radial_n - 1) * 2 * M_PI + M_PI;
+		float angle = (float)i / (child_radial_n - 1) * 2 * std::numbers::pi_v<float> +
+		              std::numbers::pi_v<float>;
 		Vector2 uv_position = Vector2{cos(angle), sin(angle)} * uv_circle_radius + uv_circle_center;
 		mesh.uvs.push_back(uv_position);
 	}
@@ -337,9 +346,9 @@ CircleDesignator add_child_circle(const Node& parent, const NodeChild& child,
 	    get_child_index_order(parent_base, child_radial_n, child_range, child, parent, mesh);
 
 	float child_twist = get_child_twist(child.node, parent);
-	int offset =
-	    (int)(child_twist / (2 * M_PI) * child_radial_n - child_radial_n / 4 + child_radial_n) %
-	    child_radial_n;
+	int offset = (int)(child_twist / (2 * std::numbers::pi_v<float>)*child_radial_n -
+	                   child_radial_n / 4 + child_radial_n) %
+	             child_radial_n;
 
 	CircleDesignator child_base{(int)mesh.vertices.size(), (int)mesh.uvs.size(), child_radial_n};
 	child_base.uv_index = add_child_base_uvs(uv_y, parent, child, child_range, child_radial_n,

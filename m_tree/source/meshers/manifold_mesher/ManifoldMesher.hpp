@@ -1,5 +1,6 @@
 #pragma once
 #include "../base_types/TreeMesher.hpp"
+#include <string>
 #include <tuple>
 
 #ifndef M_PI
@@ -14,9 +15,9 @@ class ManifoldMesher : public TreeMesher
   public:
 	struct AttributeNames
 	{
-		inline static std::string smooth_amount = "smooth_amount";
-		inline static std::string radius = "radius";
-		inline static std::string direction = "direction";
+		inline static const std::string smooth_amount = "smooth_amount";
+		inline static const std::string radius = "radius";
+		inline static const std::string direction = "direction";
 		// Pivot Painter 2.0 attributes
 		inline static std::string stem_id = "stem_id";
 		inline static std::string hierarchy_depth = "hierarchy_depth";

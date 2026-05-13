@@ -22,6 +22,11 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
     bl_idname = "mt_MesherNode"
     bl_label = "Tree Mesher"
 
+    auto_update: bpy.props.BoolProperty(
+        name="Auto Update",
+        description="Automatically rebuild tree when parameters or connections change",
+        default=True,
+    )
     radial_resolution: bpy.props.IntProperty(
         name="Radial Resolution", default=32, min=3, update=on_update_prop
     )
@@ -71,6 +76,7 @@ class TreeMesherNode(bpy.types.Node, MtreeNode):
         )
 
     def _draw_properties(self, container):
+        container.prop(self, "auto_update")
         container.prop(self, "radial_resolution")
         container.prop(self, "smoothness")
 

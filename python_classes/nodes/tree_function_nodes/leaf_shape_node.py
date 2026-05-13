@@ -8,6 +8,7 @@ from ...m_tree_wrapper import lazy_m_tree as m_tree
 from ...mesh_utils import create_leaf_mesh_from_cpp
 from ...presets.leaf_presets import LEAF_PRESETS
 from ..base_types.node import MtreeNode
+from ..debounce import schedule_build
 
 # Socket parameter definitions for organized access
 CONTOUR_PARAMS = ["m", "a", "b", "n1", "n2", "n3", "aspect_ratio"]
@@ -46,9 +47,19 @@ _REVERSE_MARGIN_MAP = {0: "ENTIRE", 1: "SERRATE", 2: "DENTATE", 3: "CRENATE", 4:
 _REVERSE_VENATION_MAP = {0: "OPEN", 1: "CLOSED"}
 
 
+def _on_leaf_prop_update(self, context):
+    """Callback for enum/bool properties that should trigger leaf regeneration."""
+    schedule_build(self, method="generate_leaf")
+
+
 class LeafShapeNode(bpy.types.Node, MtreeNode):
     bl_idname = "mt_LeafShapeNode"
     bl_label = "Leaf Shape"
+
+    auto_build_method = "generate_leaf"
+
+    # Auto-update toggle
+    auto_update: bpy.props.BoolProperty(name="Auto Update", default=True)
 
     # Section toggles
     show_contour: bpy.props.BoolProperty(name="Contour", default=True)
@@ -69,10 +80,15 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
             ("LOBED", "Lobed", "Deep rounded lobes"),
         ],
         default="ENTIRE",
+        update=_on_leaf_prop_update,
     )
 
     # Venation controls
-    enable_venation: bpy.props.BoolProperty(name="Enable Venation", default=False)
+    enable_venation: bpy.props.BoolProperty(
+        name="Enable Venation",
+        default=False,
+        update=_on_leaf_prop_update,
+    )
     venation_type: bpy.props.EnumProperty(
         name="Venation Type",
         items=[
@@ -80,6 +96,7 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
             ("CLOSED", "Closed", "Looped/anastomosing network"),
         ],
         default="OPEN",
+        update=_on_leaf_prop_update,
     )
 
     # Status feedback
@@ -401,7 +418,9 @@ class LeafShapeNode(bpy.types.Node, MtreeNode):
             icon = "ERROR" if self.status_is_error else "CHECKMARK"
             status_row.label(text=self.status_message, icon=icon)
 
-        op = layout.operator("mtree.generate_leaf", text="Generate Leaf")
+        row = layout.row(align=True)
+        row.prop(self, "auto_update", text="", icon="PLAY" if self.auto_update else "PAUSE")
+        op = row.operator("mtree.generate_leaf", text="Generate Leaf")
         op.node_tree_name = self.get_node_tree().name
         op.node_name = self.name
 

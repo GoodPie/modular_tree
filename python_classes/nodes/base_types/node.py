@@ -60,8 +60,32 @@ class MtreeNode:
         return None
 
     def get_mesher(self) -> MtreeNode | None:
-        seen_nodes = set()
-        return self.get_mesher_rec(seen_nodes)
+        """Find the mesher node connected to this node via BFS.
+
+        Uses node_tree.links instead of socket.links for reliable access
+        during property update callbacks.
+        """
+        node_tree = self.id_data
+        # Build adjacency map from the node tree's link collection
+        adjacency: dict[str, set[str]] = {}
+        for link in node_tree.links:
+            a, b = link.from_node.name, link.to_node.name
+            adjacency.setdefault(a, set()).add(b)
+            adjacency.setdefault(b, set()).add(a)
+
+        # BFS from this node
+        seen = {self.name}
+        queue = [self.name]
+        while queue:
+            name = queue.pop(0)
+            node = node_tree.nodes.get(name)
+            if node and node.bl_idname == "mt_MesherNode":
+                return node
+            for neighbor_name in adjacency.get(name, set()):
+                if neighbor_name not in seen:
+                    seen.add(neighbor_name)
+                    queue.append(neighbor_name)
+        return None
 
     # Node events, don't override ----------------
 

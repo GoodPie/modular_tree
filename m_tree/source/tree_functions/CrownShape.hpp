@@ -1,13 +1,10 @@
 #pragma once
 #include <algorithm>
 #include <cmath>
+#include <numbers>
 
 namespace Mtree
 {
-
-// Cross-platform PI constants (M_PI/M_PI_2 are not available on MSVC)
-constexpr float PI = 3.14159265358979323846f;
-constexpr float PI_2 = 1.57079632679489661923f; // PI / 2
 
 enum class CrownShape
 {
@@ -40,9 +37,9 @@ inline float get_shape_ratio(CrownShape shape, float ratio)
 	case CrownShape::Conical:
 		return MIN_RATIO + RATIO_RANGE * ratio;
 	case CrownShape::Spherical:
-		return MIN_RATIO + RATIO_RANGE * std::sin(PI * ratio);
+		return MIN_RATIO + RATIO_RANGE * std::sin(std::numbers::pi_v<float> * ratio);
 	case CrownShape::Hemispherical:
-		return MIN_RATIO + RATIO_RANGE * std::sin(PI_2 * ratio);
+		return MIN_RATIO + RATIO_RANGE * std::sin(std::numbers::pi_v<float> / 2 * ratio);
 	case CrownShape::Cylindrical:
 		return 1.0f;
 	case CrownShape::TaperedCylindrical:
