@@ -171,7 +171,7 @@ jobs:
           name: Release V${{ steps.vars.outputs.version }}
           tag_name: ${{ steps.vars.outputs.version }}
           body: V${{ steps.vars.outputs.version }}
-          prerelease: ${{ !endsWith(github.ref, 'master') }}
+          prerelease: false
 
   deploy:
     needs: [package-addon, release]
