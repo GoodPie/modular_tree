@@ -103,6 +103,12 @@ jobs:
   package-addon:
     needs: [build-wheels, test-python]
     runs-on: ubuntu-latest
+    env:
+      # Blender version used only to run `extension build --split-platforms`.
+      # The output zips are consumed by the user's Blender at install time, so
+      # this version does not affect runtime compatibility. Bump when needed.
+      BLENDER_VERSION: "5.1.0"
+      BLENDER_SERIES: "5.1"
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -117,9 +123,8 @@ jobs:
       - name: Install Blender
         run: |
           set -e
-          BLENDER_VERSION="5.1.0"
           BLENDER_TAR="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
-          BLENDER_URL="https://download.blender.org/release/Blender5.1/${BLENDER_TAR}"
+          BLENDER_URL="https://download.blender.org/release/Blender${BLENDER_SERIES}/${BLENDER_TAR}"
           mkdir -p "$HOME/blender"
           curl -L "$BLENDER_URL" -o "$HOME/blender/$BLENDER_TAR"
           tar -xJf "$HOME/blender/$BLENDER_TAR" -C "$HOME/blender"
