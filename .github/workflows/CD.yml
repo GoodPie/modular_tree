@@ -102,15 +102,6 @@ jobs:
 
   package-addon:
     needs: [build-wheels, test-python]
-    strategy:
-      matrix:
-        include:
-          - blender-version: "5.0.0"
-            blender-url-dir: "Blender5.0"
-            python-tag: "cp311"
-          - blender-version: "5.1.0"
-            blender-url-dir: "Blender5.1"
-            python-tag: "cp313"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -119,20 +110,16 @@ jobs:
           python-version: "3.11"
       - uses: actions/download-artifact@v7
         with:
-          path: all-wheels
+          path: wheels
           merge-multiple: true
-      - name: Filter wheels for Python version
-        run: |
-          mkdir -p wheels
-          cp all-wheels/*${{ matrix.python-tag }}*.whl wheels/ || true
-          echo "Filtered wheels for ${{ matrix.python-tag }}:"
-          ls -la wheels/
+      - name: Display downloaded wheels
+        run: ls -la wheels/
       - name: Install Blender
         run: |
           set -e
-          BLENDER_VERSION="${{ matrix.blender-version }}"
+          BLENDER_VERSION="5.1.0"
           BLENDER_TAR="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
-          BLENDER_URL="https://download.blender.org/release/${{ matrix.blender-url-dir }}/${BLENDER_TAR}"
+          BLENDER_URL="https://download.blender.org/release/Blender5.1/${BLENDER_TAR}"
           mkdir -p "$HOME/blender"
           curl -L "$BLENDER_URL" -o "$HOME/blender/$BLENDER_TAR"
           tar -xJf "$HOME/blender/$BLENDER_TAR" -C "$HOME/blender"
@@ -145,17 +132,11 @@ jobs:
           ADDON_ROOT="tmp/modular_tree_${VERSION}/modular_tree"
           cd "$ADDON_ROOT"
           blender --command extension build --split-platforms --output-dir ../../
-      - name: Rename extensions to include Python tag
-        run: |
-          cd tmp
-          for f in *.zip; do
-            mv "$f" "${f%.zip}-${{ matrix.python-tag }}.zip"
-          done
       - name: Display built extensions
         run: ls -la tmp/*.zip
       - uses: actions/upload-artifact@v6
         with:
-          name: modular_tree_extension_${{ matrix.python-tag }}
+          name: modular_tree_extension
           path: tmp/*.zip
 
   release:
@@ -167,9 +148,8 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/download-artifact@v7
         with:
-          pattern: modular_tree_extension_*
+          name: modular_tree_extension
           path: release
-          merge-multiple: true
       - name: Display structure of downloaded files
         run: ls -R release
       - name: Get version
@@ -196,9 +176,8 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/download-artifact@v7
         with:
-          pattern: modular_tree_extension_*
+          name: modular_tree_extension
           path: extensions
-          merge-multiple: true
       - name: Get version
         id: vars
         run: |
