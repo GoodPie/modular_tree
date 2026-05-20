@@ -8,8 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - uses: astral-sh/ruff-action@v3
-      - uses: astral-sh/ruff-action@v3
+      - uses: astral-sh/ruff-action@v4.0.0
+      - uses: astral-sh/ruff-action@v4.0.0
         with:
           args: "format --check"
 
@@ -86,7 +86,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: astral-sh/setup-uv@v7
+      - uses: astral-sh/setup-uv@v8.1.0
       - uses: actions/download-artifact@v7
         with:
           name: wheels-ubuntu-latest
@@ -102,16 +102,13 @@ jobs:
 
   package-addon:
     needs: [build-wheels, test-python]
-    strategy:
-      matrix:
-        include:
-          - blender-version: "5.0.0"
-            blender-url-dir: "Blender5.0"
-            python-tag: "cp311"
-          - blender-version: "5.1.0"
-            blender-url-dir: "Blender5.1"
-            python-tag: "cp313"
     runs-on: ubuntu-latest
+    env:
+      # Blender version used only to run `extension build --split-platforms`.
+      # The output zips are consumed by the user's Blender at install time, so
+      # this version does not affect runtime compatibility. Bump when needed.
+      BLENDER_VERSION: "5.1.0"
+      BLENDER_SERIES: "5.1"
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -119,20 +116,15 @@ jobs:
           python-version: "3.11"
       - uses: actions/download-artifact@v7
         with:
-          path: all-wheels
+          path: wheels
           merge-multiple: true
-      - name: Filter wheels for Python version
-        run: |
-          mkdir -p wheels
-          cp all-wheels/*${{ matrix.python-tag }}*.whl wheels/ || true
-          echo "Filtered wheels for ${{ matrix.python-tag }}:"
-          ls -la wheels/
+      - name: Display downloaded wheels
+        run: ls -la wheels/
       - name: Install Blender
         run: |
           set -e
-          BLENDER_VERSION="${{ matrix.blender-version }}"
           BLENDER_TAR="blender-${BLENDER_VERSION}-linux-x64.tar.xz"
-          BLENDER_URL="https://download.blender.org/release/${{ matrix.blender-url-dir }}/${BLENDER_TAR}"
+          BLENDER_URL="https://download.blender.org/release/Blender${BLENDER_SERIES}/${BLENDER_TAR}"
           mkdir -p "$HOME/blender"
           curl -L "$BLENDER_URL" -o "$HOME/blender/$BLENDER_TAR"
           tar -xJf "$HOME/blender/$BLENDER_TAR" -C "$HOME/blender"
@@ -145,17 +137,11 @@ jobs:
           ADDON_ROOT="tmp/modular_tree_${VERSION}/modular_tree"
           cd "$ADDON_ROOT"
           blender --command extension build --split-platforms --output-dir ../../
-      - name: Rename extensions to include Python tag
-        run: |
-          cd tmp
-          for f in *.zip; do
-            mv "$f" "${f%.zip}-${{ matrix.python-tag }}.zip"
-          done
       - name: Display built extensions
         run: ls -la tmp/*.zip
       - uses: actions/upload-artifact@v6
         with:
-          name: modular_tree_extension_${{ matrix.python-tag }}
+          name: modular_tree_extension
           path: tmp/*.zip
 
   release:
@@ -167,9 +153,8 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/download-artifact@v7
         with:
-          pattern: modular_tree_extension_*
+          name: modular_tree_extension
           path: release
-          merge-multiple: true
       - name: Display structure of downloaded files
         run: ls -R release
       - name: Get version
@@ -179,14 +164,14 @@ jobs:
           echo "raw_version=$RAW_VERSION" >> $GITHUB_OUTPUT
           echo "version=$(echo $RAW_VERSION | tr '_' '.')" >> $GITHUB_OUTPUT
       - name: Update release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           files: release/*.zip
           name: Release V${{ steps.vars.outputs.version }}
           tag_name: ${{ steps.vars.outputs.version }}
           body: V${{ steps.vars.outputs.version }}
-          prerelease: ${{ !endsWith(github.ref, 'master') }}
+          prerelease: false
 
   deploy:
     needs: [package-addon, release]
@@ -196,9 +181,8 @@ jobs:
       - uses: actions/checkout@v6
       - uses: actions/download-artifact@v7
         with:
-          pattern: modular_tree_extension_*
+          name: modular_tree_extension
           path: extensions
-          merge-multiple: true
       - name: Get version
         id: vars
         run: |
