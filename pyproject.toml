@@ -5,10 +5,10 @@ requires-python = ">=3.11"
 
 [dependency-groups]
 dev = [
-    "pytest>=8.0",
-    "numpy>=1.24",
-    "fake-bpy-module-4-3>=20260128",
-    "pyright>=1.1",
+    "pytest>=9.1.1",
+    "numpy>=2.4.6",
+    "fake-bpy-module-4-3>=20260730",
+    "pyright>=1.1.411",
 ]
 
 [tool.ruff]
