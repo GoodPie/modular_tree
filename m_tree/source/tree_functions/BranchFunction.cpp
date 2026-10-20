@@ -154,7 +154,11 @@ void BranchFunction::grow_node_once(Node& node, const int id,
 
 	float child_radius =
 	    Geometry::lerp(info.origin_radius, info.origin_radius * end_radius, factor_in_branch);
-	float child_length = std::min(1 / resolution, info.desired_length - info.current_length);
+	// ponytail: clamp, not the fix. get_origins counts a branch's first segment in both
+	// desired_length and current_length, so branches under two segments go negative here (#45).
+	// Fixing that adds a segment to every branch and changes saved trees; deferred to #18.
+	float child_length =
+	    std::max(0.f, std::min(1 / resolution, info.desired_length - info.current_length));
 	bool should_terminate;
 	Vector3 child_direction = get_main_child_direction(
 	    node, info.position, gravity->up_attraction, flatness, randomness.execute(factor_in_branch),

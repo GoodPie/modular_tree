@@ -1,9 +1,13 @@
 #include "TrunkFunction.hpp"
 #include "source/utilities/GeometryUtilities.hpp"
+#include <stdexcept>
 namespace Mtree
 {
 void TrunkFunction::execute(std::vector<Stem>& stems, int id, int parent_id)
 {
+	// a negative node_count never ends the size_t loop below (#41)
+	if (!(length > 0) || !(resolution > 0))
+		throw std::invalid_argument("Trunk length and resolution must be > 0");
 	rand_gen.set_seed(seed);
 
 	float segment_length = 1 / (resolution + .001);
