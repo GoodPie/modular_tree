@@ -66,7 +66,7 @@ cd m_tree/build
 2. Merge to `main`.
 3. Push a tag with the dotted version: `git tag 5.6.0 && git push origin 5.6.0`.
 
-The tag build tests the extension in Blender 4.5 and 5.2, publishes the `m-tree` wheels to PyPI,
+The tag build tests the extension in Blender 4.5 and 5.2, publishes the `modular-tree` wheels to PyPI,
 creates the GitHub release, and uploads the zips to extensions.blender.org. A tag that doesn't match
 `VERSION` fails before anything is published.
 
