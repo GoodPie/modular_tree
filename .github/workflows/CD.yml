@@ -222,11 +222,17 @@ jobs:
         with:
           name: modular_tree_extension
           path: release
+      # A release drafted for this tag keeps its title and notes. The action would append
+      # generated notes to a draft's text, so only generate them when there is no draft.
+      - name: Check for a drafted release
+        id: drafted
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: echo "found=$(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1 && echo true || echo false)" >> "$GITHUB_OUTPUT"
       - uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           files: release/*.zip
-          name: Release V${{ github.ref_name }}
-          body: V${{ github.ref_name }}
+          generate_release_notes: ${{ steps.drafted.outputs.found == 'false' }}
 
   deploy:
     needs: release
