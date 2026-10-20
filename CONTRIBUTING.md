@@ -5,9 +5,9 @@ This guide covers development setup and the C++ library architecture for contrib
 ## Prerequisites
 
 - [CMake](https://cmake.org/)
-- Python 3.9+
-- C++17 compatible compiler
-- Blender 5.0 or later (for addon development)
+- Python 3.11+
+- C++20 compatible compiler
+- Blender 4.5 or later (for addon development)
 - [uv](https://docs.astral.sh/uv/) (recommended for fast Python tool management)
 
 ## Getting Started
@@ -47,9 +47,11 @@ This guide covers development setup and the C++ library architecture for contrib
 
 ```bash
 cd m_tree/build
-cmake ../ -DPYBIND11_PYTHON_VERSION=3.9
+cmake ../ -DPython_EXECUTABLE="$(command -v python3.13)"
 cmake --build . --config Release
 ```
+
+Use the Python version your Blender bundles: 3.11 for Blender 4.5 and 5.0, 3.13 for 5.1 and later.
 
 ## Running Tests
 
@@ -58,21 +60,19 @@ cd m_tree/build
 ./binaries/m_tree_tests
 ```
 
+## Releasing
+
+1. Bump `VERSION` (for example `5_6_0`). CI stamps it into the manifest and the wheels.
+2. Merge to `main`.
+3. Push a tag with the dotted version: `git tag 5.6.0 && git push origin 5.6.0`.
+
+The tag build tests the extension in Blender 4.5 and 5.2, publishes the `m-tree` wheels to PyPI,
+creates the GitHub release, and uploads the zips to extensions.blender.org. A tag that doesn't match
+`VERSION` fails before anything is published.
+
 ## Memory Safety Testing
 
-The project uses compiler sanitizers to detect memory errors, undefined behavior, and threading issues. These run automatically in CI on every push and pull request.
-
-### CI Workflow
-
-The sanitizer workflow (`.github/workflows/sanitizers.yml`) runs three sanitizers on Linux:
-
-| Sanitizer | Detects |
-|-----------|---------|
-| **ASan** (AddressSanitizer) | Buffer overflows, use-after-free, memory leaks |
-| **UBSan** (UndefinedBehaviorSanitizer) | Signed overflow, null pointer dereference, misaligned access |
-| **TSan** (ThreadSanitizer) | Data races, deadlocks |
-
-A separate macOS job uses `xcrun leaks` for leak detection on ARM.
+Compiler sanitizers catch memory errors and undefined behavior. They don't run in CI; run them locally.
 
 ### Running Sanitizers Locally
 
