@@ -7,7 +7,11 @@ class MtreeNodeTree(bpy.types.NodeTree):
     bl_icon = "ONIONSKIN_ON"
 
     def update(self):
-        """Called when links or topology change."""
+        """Called when links or topology change, and for every tree on file load."""
+        # Mtree trees have no real user, so without a fake user Blender drops them on save (#38).
+        if self.library is None and not self.use_fake_user:
+            self.use_fake_user = True
+
         # Import here to avoid circular imports
         from ..debounce import schedule_build
 
