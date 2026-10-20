@@ -767,6 +767,18 @@ def _find_leaf_object_socket_identifier(node_group: NodeTree) -> str | None:
     return _find_socket_identifier(node_group, "Leaf Object")
 
 
+def _set_modifier_input(modifier: bpy.types.NodesModifier, identifier: str, value) -> None:
+    """Set a Geometry Nodes modifier input by socket identifier.
+
+    Blender 5.2 turned modifier inputs into RNA properties; older versions store
+    them as ID properties on the modifier.
+    """
+    if bpy.app.version >= (5, 2, 0):
+        getattr(modifier.properties.inputs, identifier).value = value
+    else:
+        modifier[identifier] = value
+
+
 def distribute_leaves(
     ob: Object,
     leaf_object: Object | None = None,
@@ -832,64 +844,63 @@ def distribute_leaves(
         leaf_object = create_default_leaf_object()
 
     # Find the Leaf Object socket identifier and set it
-    # In Blender 5.2+, modifier inputs are accessed through properties.inputs
     socket_id = _find_leaf_object_socket_identifier(node_group)
     if socket_id is not None:
-        getattr(modifier.properties.inputs, socket_id).value = leaf_object
+        _set_modifier_input(modifier, socket_id, leaf_object)
 
     # Set v2 distribution parameters
     if distribution_mode != 0:
         socket_id = _find_socket_identifier(node_group, "Distribution Mode")
         if socket_id is not None:
-            getattr(modifier.properties.inputs, socket_id).value = distribution_mode
+            _set_modifier_input(modifier, socket_id, distribution_mode)
 
     if phyllotaxis_angle != 137.5:
         socket_id = _find_socket_identifier(node_group, "Phyllotaxis Angle")
         if socket_id is not None:
-            getattr(modifier.properties.inputs, socket_id).value = phyllotaxis_angle
+            _set_modifier_input(modifier, socket_id, phyllotaxis_angle)
 
     # Set LOD/Billboard parameters
     if lod_1_object is not None:
         socket_id = _find_socket_identifier(node_group, "LOD 1 Object")
         if socket_id is not None:
-            getattr(modifier.properties.inputs, socket_id).value = lod_1_object
+            _set_modifier_input(modifier, socket_id, lod_1_object)
 
     if lod_1_distance != 20.0:
         socket_id = _find_socket_identifier(node_group, "LOD 1 Distance")
         if socket_id is not None:
-            getattr(modifier.properties.inputs, socket_id).value = lod_1_distance
+            _set_modifier_input(modifier, socket_id, lod_1_distance)
 
     if cull_distance != 100.0:
         socket_id = _find_socket_identifier(node_group, "Cull Distance")
         if socket_id is not None:
-            getattr(modifier.properties.inputs, socket_id).value = cull_distance
+            _set_modifier_input(modifier, socket_id, cull_distance)
 
     if billboard_mode != "OFF":
         socket_id = _find_socket_identifier(node_group, "Billboard Mode")
         if socket_id is not None:
-            getattr(modifier.properties.inputs, socket_id).value = BILLBOARD_MODE_MAP[billboard_mode]
+            _set_modifier_input(modifier, socket_id, BILLBOARD_MODE_MAP[billboard_mode])
 
     if camera is not None:
         socket_id = _find_socket_identifier(node_group, "Camera")
         if socket_id is not None:
-            getattr(modifier.properties.inputs, socket_id).value = camera
+            _set_modifier_input(modifier, socket_id, camera)
 
     if not enable_normal_transfer:
         socket_id = _find_socket_identifier(node_group, "Enable Normal Transfer")
         if socket_id is not None:
-            getattr(modifier.properties.inputs, socket_id).value = enable_normal_transfer
+            _set_modifier_input(modifier, socket_id, enable_normal_transfer)
 
     if density != DEFAULT_LEAF_DENSITY:
         socket_id = _find_socket_identifier(node_group, "Density")
         if socket_id is not None:
-            getattr(modifier.properties.inputs, socket_id).value = density
+            _set_modifier_input(modifier, socket_id, density)
 
     if scale != DEFAULT_LEAF_SCALE:
         socket_id = _find_socket_identifier(node_group, "Scale")
         if socket_id is not None:
-            getattr(modifier.properties.inputs, socket_id).value = scale
+            _set_modifier_input(modifier, socket_id, scale)
 
     if max_radius != DEFAULT_MAX_RADIUS:
         socket_id = _find_socket_identifier(node_group, "Max Radius")
         if socket_id is not None:
-            getattr(modifier.properties.inputs, socket_id).value = max_radius
+            _set_modifier_input(modifier, socket_id, max_radius)
