@@ -12,12 +12,12 @@ wheels = [
 ]
 
 [[package]]
-name = "fake-bpy-module-4-3"
-version = "20260128"
+name = "fake-bpy-module-4-5"
+version = "20260730"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/0d/ff/0b859d8ef1cf882c0cd7e93340ee918d1a3a9e3c00a10d65e411f17c2e77/fake_bpy_module_4_3-20260128.tar.gz", hash = "sha256:df6ccd50d4438b71cdc3473e90505602c03e40993879f7d20bade0871ed8f15d", size = 847951, upload-time = "2026-01-28T15:38:18.423Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/bd/e4/216c22184f76462a1e52d51c64af5d57134db5f17df1ccfd72dc8401e782/fake_bpy_module_4_5-20260730.tar.gz", hash = "sha256:f4e9aac5627f735f0aa28f99d6ae4c1f6c4833e6ca1ba537c552eea17b0563ef", size = 838581, upload-time = "2026-07-30T04:10:17.079Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fd/30/f36a2f62c1195eabff5d9eefbfb2229219b9108f4254d4ba8e7d515090c9/fake_bpy_module_4_3-20260128-py3-none-any.whl", hash = "sha256:4eb5798cf0ed597fa2a43b6d83701fdc7b7d071e9cef38406f04af0936af9b46", size = 969732, upload-time = "2026-01-28T15:38:08.539Z" },
+    { url = "https://files.pythonhosted.org/packages/9e/c0/9502daf14b9871a8271f009d39b02fdb095bb0e8a37ec5a8729288516752/fake_bpy_module_4_5-20260730-py3-none-any.whl", hash = "sha256:c6a0b6e4e0e9e5d918fbcfb6754063af89979ad64fbbb20f4a16e8a6c0ca7ae2", size = 967552, upload-time = "2026-07-30T04:10:15.422Z" },
 ]
 
 [[package]]
@@ -31,12 +31,12 @@ wheels = [
 
 [[package]]
 name = "modular-tree"
-version = "5.4.0"
+version = "5.5.2"
 source = { virtual = "." }
 
 [package.dev-dependencies]
 dev = [
-    { name = "fake-bpy-module-4-3" },
+    { name = "fake-bpy-module-4-5" },
     { name = "numpy" },
     { name = "pyright" },
     { name = "pytest" },
@@ -46,7 +46,7 @@ dev = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "fake-bpy-module-4-3", specifier = ">=20260128" },
+    { name = "fake-bpy-module-4-5", specifier = ">=20260730" },
     { name = "numpy", specifier = ">=1.24" },
     { name = "pyright", specifier = ">=1.1" },
     { name = "pytest", specifier = ">=8.0" },

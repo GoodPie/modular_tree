@@ -1,8 +1,6 @@
 import os
 import platform
-import re
 import subprocess
-from distutils.version import LooseVersion
 
 VCPKG_PATH = os.path.join(os.path.dirname(__file__), "dependencies", "vcpkg")
 
@@ -10,15 +8,11 @@ PACKAGES = ["eigen3"]
 
 
 def install():
+    # ponytail: no version check here; CMakeLists.txt's cmake_minimum_required enforces it.
     try:
-        out = subprocess.check_output(["cmake", "--version"])
+        subprocess.check_output(["cmake", "--version"])
     except OSError as err:
         raise RuntimeError("CMake must be installed") from err
-
-    if platform.system() == "Windows":
-        cmake_version = LooseVersion(re.search(r"version\s*([\d.]+)", out.decode()).group(1))
-        if cmake_version < "3.1.0":
-            raise RuntimeError("CMake >= 3.1.0 is required on Windows")
 
     install_vcpkg_dependencies()
     build()

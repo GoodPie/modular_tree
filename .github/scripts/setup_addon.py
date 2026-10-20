@@ -2,12 +2,22 @@ import glob
 import os
 import re
 import shutil
+import tomllib
 from pathlib import Path
 
 TMP_DIRPATH = r"./tmp"
 ADDON_SOURCE_DIRNAME = "python_classes"
 RESOURCES_DIRNAME = "resources"
 VERSION_FILEPATH = os.path.join(Path(__file__).parent.parent.parent, "VERSION")
+
+# Wheels each manifest platform needs: (platform tag prefix, arch suffix, Python tags).
+# Blender 4.5/5.0 bundle Python 3.11, 5.1+ bundle 3.13; Blender 5.x has no Intel macOS build.
+REQUIRED_WHEELS = {
+    "windows-x64": ("win", "amd64", ("cp311", "cp313")),
+    "linux-x64": ("manylinux", "x86_64", ("cp311", "cp313")),
+    "macos-arm64": ("macosx", "arm64", ("cp311", "cp313")),
+    "macos-x64": ("macosx", "x86_64", ("cp311",)),
+}
 
 
 def read_version():
@@ -62,6 +72,27 @@ def update_manifest_wheels(manifest_path, wheel_files):
     print(f"Updated manifest with {len(wheel_files)} wheels")
 
 
+def check_wheels(manifest_path, wheel_files):
+    """Fail if a manifest platform lacks a wheel for a Blender Python it must support."""
+    with open(manifest_path, "rb") as f:
+        platforms = tomllib.load(f)["platforms"]
+
+    # Wheel file names are name-version-python-abi-platform.whl
+    built = [Path(whl).stem.split("-") for whl in wheel_files]
+    missing = []
+    for platform in platforms:
+        prefix, arch, pythons = REQUIRED_WHEELS[platform]
+        for python in pythons:
+            if not any(
+                parts[2] == python and parts[4].startswith(prefix) and parts[4].endswith(arch)
+                for parts in built
+            ):
+                missing.append(f"{platform} {python}")
+
+    if missing:
+        raise Exception(f"Missing wheels for: {', '.join(missing)}")
+
+
 def setup_addon_directory():
     sync_all_versions()
     version = read_version()
@@ -90,6 +121,8 @@ def setup_addon_directory():
     if not wheel_files:
         list_files(".")
         raise Exception("No wheel files found in wheels/ directory")
+
+    check_wheels("blender_manifest.toml", wheel_files)
 
     # Update manifest with wheel paths
     update_manifest_wheels(os.path.join(root, "blender_manifest.toml"), wheel_files)
@@ -137,7 +170,16 @@ if __name__ == "__main__":
         action="store_true",
         help="Prepare directory only, skip zip creation (for use with Blender CLI)",
     )
+    parser.add_argument(
+        "--sync-only",
+        action="store_true",
+        help="Only sync the manifest and pyproject versions with VERSION",
+    )
     args = parser.parse_args()
+
+    if args.sync_only:
+        sync_all_versions()
+        raise SystemExit
 
     addon_dirpath = setup_addon_directory()
 

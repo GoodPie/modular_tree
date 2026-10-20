@@ -1,5 +1,5 @@
 [build-system]
-requires = ["scikit-build-core>=0.5", "pybind11"]
+requires = ["scikit-build-core>=0.11", "pybind11"]
 build-backend = "scikit_build_core.build"
 
 [project]
@@ -7,7 +7,13 @@ name = "m_tree"
 version = "5.5.2"
 description = "Procedural 3D tree generation library"
 requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE.md"]
+authors = [{ name = "MaximeHerpin" }, { name = "Brandyn Britton" }]
+
+[project.urls]
+Homepage = "https://github.com/GoodPie/modular_tree"
+Issues = "https://github.com/GoodPie/modular_tree/issues"
 
 [tool.scikit-build]
 wheel.packages = []
-cmake.verbose = true
