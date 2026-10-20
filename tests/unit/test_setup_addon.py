@@ -11,13 +11,13 @@ setup_addon = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(setup_addon)
 
 COMPLETE = [
-    "./wheels/m_tree-5.6.0-cp311-cp311-win_amd64.whl",
-    "./wheels/m_tree-5.6.0-cp313-cp313-win_amd64.whl",
-    "./wheels/m_tree-5.6.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
-    "./wheels/m_tree-5.6.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
-    "./wheels/m_tree-5.6.0-cp311-cp311-macosx_11_0_arm64.whl",
-    "./wheels/m_tree-5.6.0-cp313-cp313-macosx_11_0_arm64.whl",
-    "./wheels/m_tree-5.6.0-cp311-cp311-macosx_11_0_x86_64.whl",
+    "./wheels/modular_tree-5.6.0-cp311-cp311-win_amd64.whl",
+    "./wheels/modular_tree-5.6.0-cp313-cp313-win_amd64.whl",
+    "./wheels/modular_tree-5.6.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "./wheels/modular_tree-5.6.0-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+    "./wheels/modular_tree-5.6.0-cp311-cp311-macosx_11_0_arm64.whl",
+    "./wheels/modular_tree-5.6.0-cp313-cp313-macosx_11_0_arm64.whl",
+    "./wheels/modular_tree-5.6.0-cp311-cp311-macosx_11_0_x86_64.whl",
 ]
 
 

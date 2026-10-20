@@ -20,8 +20,9 @@ file(GLOB_RECURSE sources
 pybind11_add_module(m_tree ${sources})
 target_link_libraries(m_tree PRIVATE m_tree-lib)
 
-# Install target for scikit-build-core wheel builds
+# Install target for scikit-build-core wheel builds. The PyPI name is modular-tree, but the
+# import name stays m_tree, so don't install into ${SKBUILD_PROJECT_NAME}.
 if(DEFINED SKBUILD_PROJECT_NAME)
-    install(TARGETS m_tree LIBRARY DESTINATION ${SKBUILD_PROJECT_NAME})
-    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/__init__.py DESTINATION ${SKBUILD_PROJECT_NAME})
+    install(TARGETS m_tree LIBRARY DESTINATION m_tree)
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/__init__.py DESTINATION m_tree)
 endif()

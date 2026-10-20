@@ -3,7 +3,7 @@ requires = ["scikit-build-core>=0.11", "pybind11"]
 build-backend = "scikit_build_core.build"
 
 [project]
-name = "m_tree"
+name = "modular-tree"
 version = "5.5.2"
 description = "Procedural 3D tree generation library"
 requires-python = ">=3.11"
