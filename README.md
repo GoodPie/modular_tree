@@ -23,7 +23,8 @@ A procedural tree generator addon for Blender using a node-based workflow.
 
 ## Requirements
 
-- Blender 4.3 or later
+- Blender 4.5 LTS or later
+- Intel Macs: Blender 4.5 LTS (Blender 5.x has no Intel macOS build)
 
 ## Installation
 
