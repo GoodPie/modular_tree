@@ -5,6 +5,7 @@
 #include <Eigen/Geometry>
 #include <iostream>
 #include <math.h>
+#include <stdexcept>
 #include <vector>
 
 namespace Mtree
@@ -308,6 +309,13 @@ void GrowthFunction::create_lateral_buds_rec(Node& node, int id, Vector3 pos, fl
 
 void GrowthFunction::execute(std::vector<Stem>& stems, int id, int parent_id)
 {
+	// out-of-range values loop forever or crash Blender (#41)
+	if (iterations < 1)
+		throw std::invalid_argument("Growth iterations must be >= 1");
+	if (!(apical_dominance >= 0 && apical_dominance <= 1))
+		throw std::invalid_argument("Growth apical dominance must be between 0 and 1");
+	if (enable_lateral_branching && !(lateral_density > 0))
+		throw std::invalid_argument("Growth lateral density must be > 0");
 	rand_gen.set_seed(seed);
 
 	for (Stem& stem : stems)

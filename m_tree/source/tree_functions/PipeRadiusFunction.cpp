@@ -1,5 +1,6 @@
 #include "PipeRadiusFunction.hpp"
 #include "source/utilities/GeometryUtilities.hpp"
+#include <stdexcept>
 namespace Mtree
 {
 void PipeRadiusFunction::update_radius_rec(Node& node)
@@ -20,6 +21,9 @@ void PipeRadiusFunction::update_radius_rec(Node& node)
 }
 void PipeRadiusFunction::execute(std::vector<Stem>& stems, int id, int parent_id)
 {
+	// negative radii give NaN in pow() or crash the mesher (#41)
+	if (!(end_radius > 0) || !(constant_growth >= 0))
+		throw std::invalid_argument("Pipe radius end radius must be > 0 and constant growth >= 0");
 	rand_gen.set_seed(seed);
 
 	for (auto& stem : stems)

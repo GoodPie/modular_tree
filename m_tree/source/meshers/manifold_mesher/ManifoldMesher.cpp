@@ -3,8 +3,10 @@
 #include "source/utilities/GeometryUtilities.hpp"
 #include "source/utilities/NodeUtilities.hpp"
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <numbers>
+#include <stdexcept>
 
 using namespace Mtree;
 using namespace Mtree::NodeUtilities;
@@ -168,6 +170,9 @@ IndexRange get_branch_indices_on_circle(const int radial_n_points, const float c
                                         const float branch_radius, const float branch_angle)
 {
 	float angle_delta = std::asin(std::clamp(branch_radius / circle_radius, -1.f, 1.f));
+	// NaN cast to int is undefined and yields out-of-bounds vertex indices
+	if (!std::isfinite(branch_angle) || !std::isfinite(angle_delta))
+		throw std::runtime_error("ManifoldMesher: a branch has a non-finite direction or radius");
 	float increment = 2 * std::numbers::pi_v<float> / radial_n_points;
 	int min_index = (int)(std::fmod(branch_angle - angle_delta + 2 * std::numbers::pi_v<float>,
 	                                2 * std::numbers::pi_v<float>) /
@@ -342,10 +347,14 @@ CircleDesignator add_child_circle(const Node& parent, const NodeChild& child,
 	    2 * ((child_range.max_index - child_range.min_index + parent_base.radial_n) %
 	             parent_base.radial_n +
 	         1); // number of vertices in child circle
+	// an empty range (e.g. negative radius) gives 2, and add_child_base_geometry reads index 2
+	child_radial_n = std::max(4, child_radial_n);
 	std::vector<int> child_base_indices =
 	    get_child_index_order(parent_base, child_radial_n, child_range, child, parent, mesh);
 
 	float child_twist = get_child_twist(child.node, parent);
+	if (!std::isfinite(child_twist))
+		throw std::runtime_error("ManifoldMesher: a branch has a non-finite direction");
 	int offset = (int)(child_twist / (2 * std::numbers::pi_v<float>)*child_radial_n -
 	                   child_radial_n / 4 + child_radial_n) %
 	             child_radial_n;
